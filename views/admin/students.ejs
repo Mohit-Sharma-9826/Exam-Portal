@@ -1,0 +1,133 @@
+<%- include('../layouts/header') %>
+<%- include('../layouts/sidebar') %>
+
+<div class="students-admin-page">
+  <div class="card glass-card">
+    <div class="card-header border-bottom flex justify-between align-center flex-wrap gap-2">
+      <div>
+        <h3 class="card-title text-accent"><i class="fa-solid fa-users"></i> Student Database Management</h3>
+        <p class="subtext">Configure permissions, toggle status controls, or assign exam access keys.</p>
+      </div>
+    </div>
+
+    <div class="card-body">
+      <% if (students && students.length > 0) { %>
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Student Details</th>
+                <th>Roll Number</th>
+                <th>Batch/Class</th>
+                <th>Assigned Exams</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% students.forEach(item => { %>
+                <tr>
+                  <td>
+                    <div class="student-profile-info">
+                      <!-- <span class="avatar-letter bg-indigo"><%= item.user.name.charAt(0).toUpperCase() %></span> -->
+                      <div class="flex flex-col">
+                        <strong><%= item.user.name %></strong><br/>
+                        <span class="text-xs text-muted"><%= item.user.email %></span>
+                      </div>
+                    </div>
+                  </td>
+                  <td><code><%= item.profile.rollNumber %></code></td>
+                  <td><%= item.profile.batch %></td>
+                  <td>
+                    <% if (item.profile.assignedExams && item.profile.assignedExams.length > 0) { %>
+                      <div class="assigned-tags-container">
+                        <% item.profile.assignedExams.forEach(ex => { %>
+                          <span class="tag tag-indigo" title="<%= ex.title %>"><%= ex.title.substring(0, 15) %><%= ex.title.length > 15 ? '...' : '' %></span>
+                        <% }) %>
+                      </div>
+                    <% } else { %>
+                      <span class="text-muted text-xs">No exams assigned</span>
+                    <% } %>
+                  </td>
+                  <td>
+                    <span class="status-badge <%= item.user.isActive ? 'status-pass' : 'status-fail' %>">
+                      <%= item.user.isActive ? 'Active' : 'Inactive' %>
+                    </span>
+                  </td>
+                  <td>
+                    <div class="actions-group flex gap-2">
+                      <!-- Assign Exam Button -->
+                      <button class="btn btn-outline btn-xs" onclick="openAssignModal('<%= item.user._id %>', '<%= item.user.name %>')">
+                        <i class="fa-solid fa-plus-circle"></i> Assign Exam
+                      </button>
+
+                      <!-- Toggle Status Form -->
+                      <form action="/admin/students/<%= item.user._id %>/toggle" method="POST" style="display: inline;">
+                        <button type="submit" class="btn btn-xs <%= item.user.isActive ? 'btn-danger' : 'btn-success' %>">
+                          <i class="fa-solid <%= item.user.isActive ? 'fa-ban' : 'fa-check' %>"></i>
+                          <%= item.user.isActive ? 'Deactivate' : 'Activate' %>
+                        </button>
+                      </form>
+                    </div>
+                  </td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      <% } else { %>
+        <div class="empty-state">
+          <i class="fa-solid fa-users-slash"></i>
+          <h4>No Students Found</h4>
+          <p>No student accounts are currently registered in the database.</p>
+        </div>
+      <% } %>
+    </div>
+  </div>
+</div>
+
+<!-- Assign Exam Modal Overlay -->
+<div class="modal-overlay" id="assign-modal" style="display: none;">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h3>Assign Exam to Student</h3>
+      <button class="modal-close" onclick="closeAssignModal()">&times;</button>
+    </div>
+    <form id="assign-form" method="POST">
+      <div class="modal-body">
+        <p>Assign exam access to student: <strong id="assign-student-name">Student</strong></p>
+        <div class="form-group mt-4">
+          <label for="examIdSelect">Select Exam Profile:</label>
+          <select name="examId" id="examIdSelect" class="form-control" required>
+            <option value="">-- Choose Exam --</option>
+            <% exams.forEach(exam => { %>
+              <option value="<%= exam._id %>"><%= exam.title %> (<%= exam.duration %> min, <%= exam.questions.length %> Qs)</option>
+            <% }) %>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer flex justify-between">
+        <button type="button" class="btn btn-outline" onclick="closeAssignModal()">Cancel</button>
+        <button type="submit" class="btn btn-primary">Assign Exam <i class="fa-solid fa-circle-check"></i></button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  function openAssignModal(studentId, studentName) {
+    const modal = document.getElementById('assign-modal');
+    const form = document.getElementById('assign-form');
+    const nameSpan = document.getElementById('assign-student-name');
+    
+    nameSpan.innerText = studentName;
+    form.action = '/admin/students/' + studentId + '/assign';
+    modal.style.display = 'flex';
+  }
+
+  function closeAssignModal() {
+    document.getElementById('assign-modal').style.display = 'none';
+  }
+</script>
+
+<%- include('../layouts/footer') %>

@@ -1,0 +1,146 @@
+<%- include('../layouts/header') %>
+<%- include('../layouts/sidebar') %>
+
+<div class="student-dashboard">
+  <!-- Analytics Grid -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-icon bg-indigo"><i class="fa-solid fa-graduation-cap"></i></div>
+      <div class="stat-details">
+        <h3><%= metrics.totalExamsTaken %></h3>
+        <p>Exams Taken</p>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon bg-emerald"><i class="fa-solid fa-circle-check"></i></div>
+      <div class="stat-details">
+        <h3><%= metrics.passedExams %></h3>
+        <p>Exams Passed</p>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon bg-amber"><i class="fa-solid fa-percent"></i></div>
+      <div class="stat-details">
+        <h3><%= metrics.averagePercentage %>%</h3>
+        <p>Avg. Percentage</p>
+      </div>
+    </div>
+  </div>
+
+  <% if (req_query && req_query.error === 'already_submitted') { %>
+    <div class="alert alert-danger" style="margin-bottom: 1.5rem;">
+      <i class="fa-solid fa-circle-exclamation"></i>
+      <span>You have already submitted this exam or the session has expired.</span>
+    </div>
+  <% } %>
+
+  <!-- Assigned Exams Section -->
+  <div class="dashboard-section">
+    <h3 class="section-title"><i class="fa-solid fa-clipboard-list text-accent"></i> Available & Assigned Exams</h3>
+    
+    <% if (profile.assignedExams && profile.assignedExams.length > 0) { %>
+      <div class="exams-grid">
+        <% profile.assignedExams.forEach(exam => { %>
+          <% 
+            // Check if student has already completed this exam
+            const isCompleted = results.some(r => r.exam && r.exam._id.toString() === exam._id.toString());
+          %>
+          <div class="exam-card <%= isCompleted ? 'completed' : '' %>">
+            <div class="exam-card-header">
+              <h4><%= exam.title %></h4>
+              <span class="subject-tag"><i class="fa-solid fa-tag"></i> General</span>
+            </div>
+            <div class="exam-card-body">
+              <p class="exam-desc"><%= exam.description || 'No description provided.' %></p>
+              <div class="exam-info-row">
+                <span><i class="fa-regular fa-clock"></i> <%= exam.duration %> Minutes</span>
+                <span><i class="fa-regular fa-circle-question"></i> <%= exam.questions.length %> Questions</span>
+              </div>
+              <div class="exam-info-row">
+                <span><i class="fa-solid fa-star"></i> <%= exam.totalMarks %> Marks</span>
+                <span><i class="fa-solid fa-circle-check"></i> Passing: <%= exam.passingMarks %> Marks</span>
+              </div>
+            </div>
+            <div class="exam-card-footer">
+              <% if (isCompleted) { %>
+                <% const completedResult = results.find(r => r.exam && r.exam._id.toString() === exam._id.toString()); %>
+                <a href="/student/result/<%= completedResult ? completedResult._id : '#' %>" class="btn btn-outline btn-block">
+                  View Results <i class="fa-solid fa-square-poll-vertical"></i>
+                </a>
+              <% } else { %>
+                <a href="/student/exam/<%= exam._id %>/instructions" class="btn btn-primary btn-block">
+                  Start Exam <i class="fa-solid fa-play"></i>
+                </a>
+              <% } %>
+            </div>
+          </div>
+        <% }) %>
+      </div>
+    <% } else { %>
+      <div class="empty-state">
+        <i class="fa-solid fa-clipboard-question"></i>
+        <h4>No Assigned Exams</h4>
+        <p>You currently don't have any exams assigned. Contact your instructor if you think this is a mistake.</p>
+      </div>
+    <% } %>
+  </div>
+
+  <!-- Recent Attempts -->
+  <div class="dashboard-section mt-6">
+    <div class="section-header">
+      <h3 class="section-title"><i class="fa-solid fa-history text-accent"></i> Recent Test Attempts</h3>
+      <% if (results.length > 5) { %>
+        <a href="/student/history" class="view-all-link">View All History <i class="fa-solid fa-arrow-right"></i></a>
+      <% } %>
+    </div>
+    
+    <% if (results && results.length > 0) { %>
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Exam Name</th>
+              <th>Submitted Date</th>
+              <th>Attempted</th>
+              <th>Score</th>
+              <th>Percentage</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% results.slice(0, 5).forEach(result => { %>
+              <tr>
+                <td><strong><%= result.exam ? result.exam.title : 'Deleted Exam' %></strong></td>
+                <td><%= new Date(result.completedAt).toLocaleString() %></td>
+                <td><%= result.attemptedQuestions %> / <%= result.totalQuestions %></td>
+                <td><%= result.score %> / <%= result.exam ? result.exam.totalMarks : 'N/A' %></td>
+                <td>
+                  <div class="percent-badge-container">
+                    <span class="percent-text font-bold"><%= result.percentage %>%</span>
+                  </div>
+                </td>
+                <td>
+                  <span class="status-badge <%= result.status === 'pass' ? 'status-pass' : 'status-fail' %>">
+                    <%= result.status === 'pass' ? 'PASS' : 'FAIL' %>
+                  </span>
+                </td>
+                <td>
+                  <a href="/student/result/<%= result._id %>" class="btn-table-action" title="View Scorecard">
+                    <i class="fa-solid fa-eye"></i> View
+                  </a>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } else { %>
+      <div class="empty-state-small">
+        <p>No exams attempted yet.</p>
+      </div>
+    <% } %>
+  </div>
+</div>
+
+<%- include('../layouts/footer') %>

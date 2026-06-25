@@ -1,0 +1,193 @@
+<%- include('../layouts/header') %>
+
+<!-- Full-width examination portal wrapper (overriding standard sidebar layouts for competitive exam atmosphere) -->
+<div class="exam-portal-wrapper">
+  <!-- Exam Top Header -->
+  <header class="exam-header">
+    <div class="exam-logo-section">
+      <i class="fa-solid fa-graduation-cap"></i>
+      <div>
+        <h1><%= exam.title %></h1>
+        <p class="subject-subtext"><i class="fa-solid fa-tag"></i> General Evaluation</p>
+      </div>
+    </div>
+    
+    <div class="exam-timer-section" id="timer-box">
+      <div class="timer-icon"><i class="fa-regular fa-clock"></i></div>
+      <div class="timer-digits">
+        <span class="timer-label">TIME REMAINING</span>
+        <span id="countdown-timer">00:00:00</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Portal Screen -->
+  <div class="exam-main-layout">
+    <!-- Left Column: Question Card & Controls -->
+    <div class="exam-left-column">
+      
+      <!-- Questions Container -->
+      <div class="question-workspace">
+        <% questions.forEach((question, idx) => { %>
+          <% 
+            // Find saved response in active session
+            const savedResp = session.responses.find(r => r.questionId.toString() === question._id.toString());
+            const savedOption = savedResp ? savedResp.selectedOption : '';
+          %>
+          <div class="question-card" id="q-card-<%= idx + 1 %>" style="display: <%= idx === 0 ? 'block' : 'none' %>;" data-question-id="<%= question._id %>">
+            <div class="question-meta-row">
+              <span class="q-number-badge">Question <%= idx + 1 %> of <%= questions.length %></span>
+              <div class="marks-indicator">
+                <span class="marks-positive"><i class="fa-solid fa-plus"></i><%= question.marks %> Marks</span>
+                <% if (question.negativeMarks > 0) { %>
+                  <span class="marks-negative"><i class="fa-solid fa-minus"></i><%= question.negativeMarks %> Neg</span>
+                <% } %>
+              </div>
+              <span class="category-tag"><%= question.subject %></span>
+            </div>
+
+            <div class="question-text">
+              <p><%= question.text %></p>
+            </div>
+
+            <div class="options-container">
+              <label class="option-item <%= savedOption === 'A' ? 'selected' : '' %>">
+                <input type="radio" name="options-q-<%= idx + 1 %>" value="A" <%= savedOption === 'A' ? 'checked' : '' %> onchange="selectOption(<%= idx + 1 %>, 'A')">
+                <span class="option-label">A</span>
+                <span class="option-val"><%= question.options.A %></span>
+              </label>
+
+              <label class="option-item <%= savedOption === 'B' ? 'selected' : '' %>">
+                <input type="radio" name="options-q-<%= idx + 1 %>" value="B" <%= savedOption === 'B' ? 'checked' : '' %> onchange="selectOption(<%= idx + 1 %>, 'B')">
+                <span class="option-label">B</span>
+                <span class="option-val"><%= question.options.B %></span>
+              </label>
+
+              <label class="option-item <%= savedOption === 'C' ? 'selected' : '' %>">
+                <input type="radio" name="options-q-<%= idx + 1 %>" value="C" <%= savedOption === 'C' ? 'checked' : '' %> onchange="selectOption(<%= idx + 1 %>, 'C')">
+                <span class="option-label">C</span>
+                <span class="option-val"><%= question.options.C %></span>
+              </label>
+
+              <label class="option-item <%= savedOption === 'D' ? 'selected' : '' %>">
+                <input type="radio" name="options-q-<%= idx + 1 %>" value="D" <%= savedOption === 'D' ? 'checked' : '' %> onchange="selectOption(<%= idx + 1 %>, 'D')">
+                <span class="option-label">D</span>
+                <span class="option-val"><%= question.options.D %></span>
+              </label>
+            </div>
+          </div>
+        <% }) %>
+      </div>
+
+      <!-- Action Footer -->
+      <footer class="exam-actions-footer">
+        <div class="footer-left">
+          <button class="btn btn-outline" id="prev-btn" onclick="navigateQuestion(-1)"><i class="fa-solid fa-arrow-left"></i> Previous</button>
+          <button class="btn btn-outline" id="clear-btn" onclick="clearSelectedOption()"><i class="fa-solid fa-eraser"></i> Clear Response</button>
+        </div>
+        <div class="footer-right">
+          <button class="btn btn-warning" id="review-btn" onclick="markForReview()"><i class="fa-solid fa-bookmark"></i> Mark for Review</button>
+          <button class="btn btn-primary" id="next-btn" onclick="navigateQuestion(1)">Save & Next <i class="fa-solid fa-arrow-right"></i></button>
+        </div>
+      </footer>
+    </div>
+
+    <!-- Right Column: Status & Palette Grid -->
+    <div class="exam-right-column">
+      <!-- Profile Header widget -->
+      <div class="student-profile-widget">
+        <div class="student-avatar"><%= user.name.charAt(0).toUpperCase() %></div>
+        <div class="student-meta">
+          <h3><%= user.name %></h3>
+          <p>ID: <%= user.email %></p>
+        </div>
+      </div>
+
+      <!-- Live Palette Status Counters -->
+      <div class="palette-counters">
+        <div class="counter-item">
+          <span class="palette-indicator green" id="count-answered">0</span>
+          <span class="counter-label">Answered</span>
+        </div>
+        <div class="counter-item">
+          <span class="palette-indicator red" id="count-unanswered">0</span>
+          <span class="counter-label">Unanswered</span>
+        </div>
+        <div class="counter-item">
+          <span class="palette-indicator purple" id="count-marked">0</span>
+          <span class="counter-label">Marked</span>
+        </div>
+        <div class="counter-item">
+          <span class="palette-indicator grey" id="count-unvisited">0</span>
+          <span class="counter-label">Unvisited</span>
+        </div>
+      </div>
+
+      <!-- Palette Grid Box -->
+      <div class="palette-grid-box">
+        <h4>Question Palette</h4>
+        <div class="palette-buttons-grid">
+          <% questions.forEach((question, idx) => { %>
+            <%
+              // Determine initial color state from response session
+              const savedResp = session.responses.find(r => r.questionId.toString() === question._id.toString());
+              let stateClass = 'grey'; // Default unvisited
+              if (savedResp) {
+                if (savedResp.visited) stateClass = 'red'; // Visited but not answered
+                if (savedResp.selectedOption !== '') stateClass = 'green'; // Answered
+                if (savedResp.markedForReview) stateClass = 'purple'; // Marked for review
+              }
+            %>
+            <button class="palette-btn <%= stateClass %>" id="palette-btn-<%= idx + 1 %>" onclick="jumpToQuestion(<%= idx + 1 %>)">
+              <%= idx + 1 %>
+            </button>
+          <% }) %>
+        </div>
+      </div>
+
+      <!-- Submit Section -->
+      <div class="palette-submit-box">
+        <button class="btn btn-secondary btn-block" onclick="triggerSubmitConfirmation()">
+          Submit Exam <i class="fa-solid fa-circle-check"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Submit Confirmation Modal Overlay -->
+<div class="modal-overlay" id="confirm-modal" style="display: none;">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h3>Submit Confirmation</h3>
+      <button class="modal-close" onclick="closeSubmitConfirmation()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p>Are you sure you want to end and submit this examination?</p>
+      <div class="summary-bullets">
+        <p><i class="fa-solid fa-circle-info text-indigo"></i> Total Questions: <strong><%= questions.length %></strong></p>
+        <p><i class="fa-solid fa-circle-check text-emerald"></i> Answered: <strong id="modal-answered-val">0</strong></p>
+        <p><i class="fa-solid fa-bookmark text-amber"></i> Marked for Review: <strong id="modal-marked-val">0</strong></p>
+      </div>
+      <p class="text-danger mt-2"><i class="fa-solid fa-triangle-exclamation"></i> Warning: Once submitted, you cannot resume or edit responses.</p>
+    </div>
+    <div class="modal-footer flex justify-between">
+      <button class="btn btn-outline" onclick="closeSubmitConfirmation()">Cancel</button>
+      <form action="/student/exam/<%= exam._id %>/submit" method="POST" id="submit-form">
+        <input type="hidden" name="examId" value="<%= exam._id %>">
+        <button type="submit" class="btn btn-secondary">Yes, Submit Exam <i class="fa-solid fa-paper-plane"></i></button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Embedded state for client side JS -->
+<div id="exam-meta" 
+     data-exam-id="<%= exam._id %>"
+     data-total-questions="<%= questions.length %>"
+     data-remaining-seconds="<%= remainingSeconds %>"
+     style="display: none;">
+</div>
+
+<script src="/js/exam.js"></script>
+<%- include('../layouts/footer') %>

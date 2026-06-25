@@ -1,0 +1,203 @@
+<%- include('../layouts/header') %>
+<%- include('../layouts/sidebar') %>
+
+<div class="admin-dashboard">
+  <!-- Top Stat Cards -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-icon bg-indigo"><i class="fa-solid fa-users"></i></div>
+      <div class="stat-details">
+        <h3><%= stats.students %></h3>
+        <p>Registered Students</p>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon bg-emerald"><i class="fa-solid fa-file-invoice"></i></div>
+      <div class="stat-details">
+        <h3><%= stats.exams %></h3>
+        <p>Total Exams</p>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon bg-amber"><i class="fa-solid fa-folder-open"></i></div>
+      <div class="stat-details">
+        <h3><%= stats.questions %></h3>
+        <p>Questions Bank</p>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon bg-rose"><i class="fa-solid fa-square-poll-vertical"></i></div>
+      <div class="stat-details">
+        <h3><%= stats.results %></h3>
+        <p>Total Submissions</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Charts Layout Grid -->
+  <div class="dashboard-charts-row">
+    <!-- Pass Fail Ratios Card -->
+    <div class="card glass-card chart-card">
+      <div class="card-header border-bottom">
+        <h4 class="card-title"><i class="fa-solid fa-chart-pie"></i> Pass/Fail Distribution</h4>
+      </div>
+      <div class="card-body chart-body">
+        <% if (charts.passCount === 0 && charts.failCount === 0) { %>
+          <p class="no-data-msg">No submissions recorded yet.</p>
+        <% } else { %>
+          <canvas id="passFailChart"></canvas>
+        <% } %>
+      </div>
+    </div>
+
+    <!-- Exam Performance Comparison Card -->
+    <div class="card glass-card chart-card double-width">
+      <div class="card-header border-bottom">
+        <h4 class="card-title"><i class="fa-solid fa-chart-bar"></i> Average Score Percentage per Exam</h4>
+      </div>
+      <div class="card-body chart-body">
+        <% if (charts.examPerformance.length === 0) { %>
+          <p class="no-data-msg">No examination metrics available.</p>
+        <% } else { %>
+          <canvas id="examPerformanceChart"></canvas>
+        <% } %>
+      </div>
+    </div>
+  </div>
+
+  <div class="dashboard-charts-row mt-6">
+    <!-- Subject Distribution Card -->
+    <div class="card glass-card chart-card">
+      <div class="card-header border-bottom">
+        <h4 class="card-title"><i class="fa-solid fa-tags"></i> Questions by Subject Category</h4>
+      </div>
+      <div class="card-body chart-body">
+        <% if (charts.subjectBreakdown.length === 0) { %>
+          <p class="no-data-msg">No questions categorized yet.</p>
+        <% } else { %>
+          <canvas id="subjectChart"></canvas>
+        <% } %>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Load Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const textColor = isDark ? '#f3f4f6' : '#1f2937';
+    const gridColor = isDark ? '#374151' : '#e5e7eb';
+    
+    // 1. Pass Fail Chart
+    <% if (charts.passCount > 0 || charts.failCount > 0) { %>
+      const pfCtx = document.getElementById('passFailChart').getContext('2d');
+      new Chart(pfCtx, {
+        type: 'pie',
+        data: {
+          labels: ['Pass', 'Fail'],
+          datasets: [{
+            data: [<%= charts.passCount %>, <%= charts.failCount %>],
+            backgroundColor: ['#10b981', '#ef4444'],
+            borderWidth: 1,
+            borderColor: isDark ? '#1f2937' : '#ffffff'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: { color: textColor, font: { family: 'Outfit' } }
+            }
+          }
+        }
+      });
+    <% } %>
+
+    // 2. Exam Performance Chart
+    <% if (charts.examPerformance.length > 0) { %>
+      const epCtx = document.getElementById('examPerformanceChart').getContext('2d');
+      const examTitles = [];
+      const examAverages = [];
+      <% charts.examPerformance.forEach(perf => { %>
+        examTitles.push('<%= perf.title %>');
+        examAverages.push(<%= perf.avgPercentage %>);
+      <% }) %>
+
+      new Chart(epCtx, {
+        type: 'bar',
+        data: {
+          labels: examTitles,
+          datasets: [{
+            label: 'Average %',
+            data: examAverages,
+            backgroundColor: 'rgba(99, 102, 241, 0.75)',
+            borderColor: '#6366f1',
+            borderWidth: 1.5,
+            borderRadius: 6
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false }
+          },
+          scales: {
+            x: {
+              grid: { color: gridColor },
+              ticks: { color: textColor, font: { family: 'Outfit' } }
+            },
+            y: {
+              min: 0,
+              max: 100,
+              grid: { color: gridColor },
+              ticks: { color: textColor, font: { family: 'Outfit' } }
+            }
+          }
+        }
+      });
+    <% } %>
+
+    // 3. Subject Breakdown Chart
+    <% if (charts.subjectBreakdown.length > 0) { %>
+      const subCtx = document.getElementById('subjectChart').getContext('2d');
+      const subjects = [];
+      const subjectCounts = [];
+      <% charts.subjectBreakdown.forEach(sub => { %>
+        subjects.push('<%= sub._id %>');
+        subjectCounts.push(<%= sub.count %>);
+      <% }) %>
+
+      new Chart(subCtx, {
+        type: 'doughnut',
+        data: {
+          labels: subjects,
+          datasets: [{
+            data: subjectCounts,
+            backgroundColor: [
+              '#6366f1', '#10b981', '#f59e0b', '#ec4899', '#3b82f6', '#8b5cf6'
+            ],
+            borderWidth: 1,
+            borderColor: isDark ? '#1f2937' : '#ffffff'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: { color: textColor, font: { family: 'Outfit' } }
+            }
+          }
+        }
+      });
+    <% } %>
+  });
+</script>
+
+<%- include('../layouts/footer') %>

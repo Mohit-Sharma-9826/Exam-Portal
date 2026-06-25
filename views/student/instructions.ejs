@@ -1,0 +1,68 @@
+<%- include('../layouts/header') %>
+<%- include('../layouts/sidebar') %>
+
+<div class="instructions-page">
+  <div class="card glass-card">
+    <div class="card-header border-bottom">
+      <h3 class="card-title text-accent"><i class="fa-solid fa-circle-info"></i> Exam Instructions & Guidelines</h3>
+      <span class="badge badge-info"><%= exam.title %></span>
+    </div>
+    
+    <div class="card-body">
+      <div class="exam-summary-grid">
+        <div class="summary-item">
+          <span class="label">Duration:</span>
+          <span class="value"><%= exam.duration %> Minutes</span>
+        </div>
+        <div class="summary-item">
+          <span class="label">Total Questions:</span>
+          <span class="value"><%= exam.questions.length %> MCQs</span>
+        </div>
+        <div class="summary-item">
+          <span class="label">Total Marks:</span>
+          <span class="value"><%= exam.totalMarks %> Marks</span>
+        </div>
+        <div class="summary-item">
+          <span class="label">Passing Score:</span>
+          <span class="value"><%= exam.passingMarks %> Marks (<%= ((exam.passingMarks / exam.totalMarks) * 100).toFixed(0) %>%)</span>
+        </div>
+      </div>
+
+      <div class="instructions-content">
+        <h4>Please read the following instructions carefully:</h4>
+        <ol class="instructions-list">
+          <li><strong>Timing & Countdown:</strong> The countdown timer at the top right of the exam screen will display the remaining time. Once the time runs out, the exam will be <strong>automatically submitted</strong>.</li>
+          <li><strong>Navigation:</strong>
+            <ul>
+              <li>You can navigate between questions using the <strong>Next</strong> and <strong>Previous</strong> buttons.</li>
+              <li>You can also click on any question number in the <strong>Question Palette</strong> on the right to jump directly to that question.</li>
+            </ul>
+          </li>
+          <li><strong>Option Selection:</strong>
+            <ul>
+              <li>Only one option can be selected per question.</li>
+              <li>To change your response, click another option. To clear your response, click the <strong>Clear Response</strong> button.</li>
+              <li>Your answers are saved automatically as you progress.</li>
+            </ul>
+          </li>
+          <li><strong>Question Palette Indicators:</strong>
+            <div class="palette-legend-grid">
+              <div class="legend-item"><span class="palette-box grey"></span> Unvisited</div>
+              <div class="legend-item"><span class="palette-box red"></span> Visited (Unanswered)</div>
+              <div class="legend-item"><span class="palette-box green"></span> Answered</div>
+              <div class="legend-item"><span class="palette-box purple"></span> Marked for Review</div>
+            </div>
+          </li>
+          <li><strong>Browser Warnings:</strong> Do not reload the page or navigate away. Closing the tab will not pause the timer. You can resume the test from your dashboard, but the countdown will continue in the background from your initial start time.</li>
+        </ol>
+      </div>
+    </div>
+    
+    <div class="card-footer border-top flex justify-between align-center">
+      <a href="/student/dashboard" class="btn btn-outline"><i class="fa-solid fa-arrow-left"></i> Back to Dashboard</a>
+      <a href="/student/exam/<%= exam._id %>" class="btn btn-primary">I Agree & Start Test <i class="fa-solid fa-circle-play"></i></a>
+    </div>
+  </div>
+</div>
+
+<%- include('../layouts/footer') %>

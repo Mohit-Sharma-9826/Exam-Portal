@@ -1,0 +1,55 @@
+<%- include('../layouts/header') %>
+<%- include('../layouts/sidebar') %>
+
+<div class="logs-audit-page">
+  <div class="card glass-card">
+    <div class="card-header border-bottom">
+      <h3 class="card-title text-accent"><i class="fa-solid fa-clock-rotate-left"></i> Security & Admin Activity Logs</h3>
+      <p class="subtext">Chronological history of operations executed by the administration team.</p>
+    </div>
+
+    <div class="card-body">
+      <% if (logs && logs.length > 0) { %>
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Admin Name</th>
+                <th>Action Code</th>
+                <th>Operation Details</th>
+                <th>IP Address</th>
+                <th>Timestamp</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% logs.forEach(log => { %>
+                <tr>
+                  <td>
+                    <div class="flex flex-col">
+                      <strong><%= log.admin ? log.admin.name : 'System/Deleted' %></strong>
+                      <span class="text-xs text-muted"><%= log.admin ? log.admin.email : '' %></span>
+                    </div>
+                  </td>
+                  <td>
+                    <span class="badge badge-info font-bold"><%= log.action %></span>
+                  </td>
+                  <td><span class="log-details-text"><%= log.details %></span></td>
+                  <td><code><%= log.ipAddress || '127.0.0.1' %></code></td>
+                  <td><%= new Date(log.timestamp).toLocaleString() %></td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      <% } else { %>
+        <div class="empty-state">
+          <i class="fa-solid fa-clipboard-check"></i>
+          <h4>No Activity Logs</h4>
+          <p>No audit trail logs are available yet.</p>
+        </div>
+      <% } %>
+    </div>
+  </div>
+</div>
+
+<%- include('../layouts/footer') %>
