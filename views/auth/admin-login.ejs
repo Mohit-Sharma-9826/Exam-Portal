@@ -1,0 +1,41 @@
+<%- include('../layouts/header') %>
+
+<div class="auth-page-container admin-theme">
+  <div class="auth-card">
+    <div class="auth-header">
+      <div class="auth-logo">
+        <i class="fa-solid fa-user-shield text-accent"></i>
+        <span>ExamPortal Admin</span>
+      </div>
+      <h3>Administrative Login</h3>
+      <p>Authorized access only. Audit logs are active.</p>
+    </div>
+
+    <% if (error) { %>
+      <div class="alert alert-danger">
+        <i class="fa-solid fa-circle-exclamation"></i>
+        <span><%= error %></span>
+      </div>
+    <% } %>
+
+    <form action="/auth/admin-login" method="POST" class="auth-form">
+      <div class="form-group">
+        <label for="email"><i class="fa-solid fa-envelope-open"></i> Admin Email</label>
+        <input type="email" id="email" name="email" placeholder="admin@exam.com" required autocomplete="email">
+      </div>
+
+      <div class="form-group">
+        <label for="password"><i class="fa-solid fa-key"></i> Key Pass</label>
+        <input type="password" id="password" name="password" placeholder="••••••••" required autocomplete="current-password">
+      </div>
+
+      <button type="submit" class="btn btn-secondary btn-block">Verify & Enter <i class="fa-solid fa-unlock-keyhole"></i></button>
+    </form>
+
+    <div class="auth-footer">
+      <p><a href="/auth/login"><i class="fa-solid fa-arrow-left"></i> Return to Student Portal</a></p>
+    </div>
+  </div>
+</div>
+
+<%- include('../layouts/footer') %>

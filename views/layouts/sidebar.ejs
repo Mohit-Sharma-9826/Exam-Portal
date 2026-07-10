@@ -1,0 +1,112 @@
+<% if (typeof user !== 'undefined' && user) { %>
+  <aside class="app-sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="logo">
+        <i class="fa-solid fa-graduation-cap"></i>
+        <span>ExamPortal</span>
+      </div>
+      <button class="mobile-close-btn" id="mobile-sidebar-close" aria-label="Close Sidebar">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <div class="user-badge">
+      <div class="user-avatar">
+        <%= user.name.charAt(0).toUpperCase() %>
+      </div>
+      <div class="user-info">
+        <h4 class="user-name"><%= user.name %></h4>
+        <span class="user-role"><%= user.role.toUpperCase() %></span>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <ul>
+        <% if (user.role === 'admin') { %>
+          <li>
+            <a href="/admin/dashboard" class="<%= req_path === '/admin/dashboard' ? 'active' : '' %>">
+              <i class="fa-solid fa-chart-pie"></i>
+              <span>Dashboard</span>
+            </a>
+          </li>
+          <li>
+            <a href="/admin/students" class="<%= req_path === '/admin/students' ? 'active' : '' %>">
+              <i class="fa-solid fa-users"></i>
+              <span>Manage Students</span>
+            </a>
+          </li>
+          <li>
+            <a href="/admin/exams" class="<%= req_path === '/admin/exams' ? 'active' : '' %>">
+              <i class="fa-solid fa-file-invoice"></i>
+              <span>Manage Exams</span>
+            </a>
+          </li>
+          <li>
+            <a href="/admin/questions" class="<%= req_path === '/admin/questions' ? 'active' : '' %>">
+              <i class="fa-solid fa-folder-open"></i>
+              <span>Question Bank</span>
+            </a>
+          </li>
+          <li>
+            <a href="/admin/results" class="<%= req_path === '/admin/results' ? 'active' : '' %>">
+              <i class="fa-solid fa-square-poll-vertical"></i>
+              <span>Exam Results</span>
+            </a>
+          </li>
+          <li>
+            <a href="/admin/logs" class="<%= req_path === '/admin/logs' ? 'active' : '' %>">
+              <i class="fa-solid fa-clock-rotate-left"></i>
+              <span>Activity Logs</span>
+            </a>
+          </li>
+        <% } else { %>
+          <li>
+            <a href="/student/dashboard" class="<%= req_path === '/student/dashboard' ? 'active' : '' %>">
+              <i class="fa-solid fa-gauge-high"></i>
+              <span>Dashboard</span>
+            </a>
+          </li>
+          <li>
+            <a href="/student/history" class="<%= req_path === '/student/history' ? 'active' : '' %>">
+              <i class="fa-solid fa-history"></i>
+              <span>Exam History</span>
+            </a>
+          </li>
+          <li>
+            <a href="/student/leaderboard" class="<%= req_path === '/student/leaderboard' ? 'active' : '' %>">
+              <i class="fa-solid fa-trophy"></i>
+              <span>Leaderboard</span>
+            </a>
+          </li>
+        <% } %>
+      </ul>
+    </nav>
+
+    <div class="sidebar-footer">
+      <button class="theme-toggle-btn" id="theme-toggle">
+        <i class="fa-solid fa-sun" id="theme-icon-light"></i>
+        <i class="fa-solid fa-moon" id="theme-icon-dark"></i>
+        <span id="theme-text">Toggle Theme</span>
+      </button>
+      <a href="/auth/logout" class="logout-link">
+        <i class="fa-solid fa-right-from-bracket"></i>
+        <span>Logout</span>
+      </a>
+    </div>
+  </aside>
+
+  <!-- Main Content Wrapper for page structure -->
+  <main class="main-content">
+    <header class="top-nav-bar">
+      <button class="hamburger-menu" id="mobile-sidebar-toggle" aria-label="Toggle Sidebar">
+        <i class="fa-solid fa-bars"></i>
+      </button>
+      <div class="top-nav-title">
+        <h2><%= typeof title !== 'undefined' ? title : '' %></h2>
+      </div>
+      <div class="top-nav-actions">
+        <span class="date-badge"><i class="fa-regular fa-calendar"></i> <%= new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) %></span>
+      </div>
+    </header>
+    <div class="content-body">
+<% } %>

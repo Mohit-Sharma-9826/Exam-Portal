@@ -1,0 +1,121 @@
+<%- include('../layouts/header') %>
+<%- include('../layouts/sidebar') %>
+
+<div class="result-page-container">
+  <div class="card glass-card result-summary-card">
+    <div class="card-header flex justify-between align-center border-bottom">
+      <div>
+        <h3 class="card-title text-accent"><i class="fa-solid fa-square-poll-vertical"></i> Exam Scorecard</h3>
+        <span class="subtext">Exam Name: <strong><%= result.exam ? result.exam.title : 'Deleted Exam' %></strong></span>
+      </div>
+      <span class="status-badge large <%= result.status === 'pass' ? 'status-pass' : 'status-fail' %>">
+        <%= result.status === 'pass' ? 'PASS' : 'FAIL' %>
+      </span>
+    </div>
+
+    <div class="card-body">
+      <div class="result-split-layout">
+        
+        <!-- Left Side: Statistics Grid -->
+        <div class="result-stats-pane">
+          <div class="main-score-badge">
+            <span class="score-num"><%= result.score %></span>
+            <span class="score-total">/ <%= result.exam ? result.exam.totalMarks : 'N/A' %> Marks</span>
+          </div>
+
+          <div class="stats-mini-grid">
+            <div class="mini-stat-card">
+              <span class="label">Percentage</span>
+              <span class="val text-indigo"><%= result.percentage %>%</span>
+            </div>
+            <div class="mini-stat-card">
+              <span class="label">Attempted</span>
+              <span class="val"><%= result.attemptedQuestions %> / <%= result.totalQuestions %></span>
+            </div>
+            <div class="mini-stat-card">
+              <span class="label">Correct Answers</span>
+              <span class="val text-emerald"><%= result.correctAnswers %></span>
+            </div>
+            <div class="mini-stat-card">
+              <span class="label">Incorrect Answers</span>
+              <span class="val text-rose"><%= result.incorrectAnswers %></span>
+            </div>
+            <div class="mini-stat-card">
+              <span class="label">Unattempted</span>
+              <span class="val text-muted"><%= result.totalQuestions - result.attemptedQuestions %></span>
+            </div>
+            <div class="mini-stat-card">
+              <span class="label">Passing Mark</span>
+              <span class="val"><%= result.exam ? result.exam.passingMarks : 'N/A' %> Marks</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Side: Graphic Visual Chart.js -->
+        <div class="result-chart-pane">
+          <h4>Performance Breakdown</h4>
+          <div class="chart-wrapper">
+            <canvas id="resultChart"></canvas>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="card-footer border-top flex justify-between mt-4">
+      <a href="/student/dashboard" class="btn btn-outline"><i class="fa-solid fa-house"></i> Dashboard</a>
+      <div class="footer-actions flex gap-2">
+        <a href="/student/leaderboard?examId=<%= result.exam ? result.exam._id : '' %>" class="btn btn-primary"><i class="fa-solid fa-trophy"></i> View Leaderboard</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Load Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const ctx = document.getElementById('resultChart').getContext('2d');
+    
+    const correct = <%= result.correctAnswers %>;
+    const incorrect = <%= result.incorrectAnswers %>;
+    const unattempted = <%= result.totalQuestions - result.attemptedQuestions %>;
+
+    // Use HSL colors consistent with the CSS theme variable palettes
+    new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: ['Correct', 'Incorrect', 'Unattempted'],
+        datasets: [{
+          data: [correct, incorrect, unattempted],
+          backgroundColor: [
+            '#10b981', // Emerald green
+            '#ef4444', // Rose red
+            '#6b7280'  // Slate grey
+          ],
+          borderWidth: 2,
+          borderColor: document.documentElement.getAttribute('data-theme') === 'dark' ? '#1f2937' : '#ffffff',
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'bottom',
+            labels: {
+              color: document.documentElement.getAttribute('data-theme') === 'dark' ? '#f3f4f6' : '#1f2937',
+              font: {
+                family: 'Outfit',
+                size: 13
+              }
+            }
+          }
+        },
+        cutout: '70%'
+      }
+    });
+  });
+</script>
+
+<%- include('../layouts/footer') %>

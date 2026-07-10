@@ -1,0 +1,207 @@
+<%- include('../layouts/header') %>
+<%- include('../layouts/sidebar') %>
+
+<div class="exams-admin-page">
+  <div class="card glass-card">
+    <div class="card-header border-bottom flex justify-between align-center flex-wrap gap-2">
+      <div>
+        <h3 class="card-title text-accent"><i class="fa-solid fa-file-invoice"></i> Examination Profiles</h3>
+        <p class="subtext">Configure exam parameters, adjust passing configurations, and select MCQ rosters.</p>
+      </div>
+      <button class="btn btn-primary" onclick="openExamModal('create')">
+        <i class="fa-solid fa-plus-circle"></i> Create New Exam
+      </button>
+    </div>
+
+    <div class="card-body">
+      <% if (exams && exams.length > 0) { %>
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Exam Name</th>
+                <th>Duration</th>
+                <th>Total Marks</th>
+                <th>Passing Marks</th>
+                <th>Questions Count</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% exams.forEach(exam => { %>
+                <tr>
+                  <td>
+                    <div class="flex flex-col">
+                      <strong><%= exam.title %></strong>
+                      <span class="text-xs text-muted"><%= exam.description ? exam.description.substring(0, 50) + (exam.description.length > 50 ? '...' : '') : 'No description' %></span>
+                    </div>
+                  </td>
+                  <td><%= exam.duration %> mins</td>
+                  <td><%= exam.totalMarks %> Marks</td>
+                  <td><%= exam.passingMarks %> Marks</td>
+                  <td>
+                    <span class="badge badge-info"><%= exam.questions.length %> MCQs</span>
+                  </td>
+                  <td>
+                    <div class="actions-group flex gap-2">
+                      <button class="btn btn-outline btn-xs" onclick="openExamModal('edit', '<%= exam._id %>')">
+                        <i class="fa-solid fa-pen-to-square"></i> Edit
+                      </button>
+                      <button class="btn btn-danger btn-xs" onclick="deleteExam('<%= exam._id %>')">
+                        <i class="fa-solid fa-trash"></i> Delete
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      <% } else { %>
+        <div class="empty-state">
+          <i class="fa-solid fa-file-excel"></i>
+          <h4>No Exams Created</h4>
+          <p>Click "Create New Exam" to set up your first examination session.</p>
+        </div>
+      <% } %>
+    </div>
+  </div>
+</div>
+
+<!-- Create/Edit Exam Modal Overlay -->
+<div class="modal-overlay" id="exam-modal" style="display: none;">
+  <div class="modal-card modal-large">
+    <div class="modal-header">
+      <h3 id="modal-title">Create New Exam</h3>
+      <button class="modal-close" onclick="closeExamModal()">&times;</button>
+    </div>
+    
+    <form id="exam-form" method="POST">
+      <div class="modal-body modal-scroll-body">
+        <div class="form-grid">
+          <div class="form-group full-width">
+            <label for="title">Exam Title</label>
+            <input type="text" id="title" name="title" placeholder="E.g. Web Development Quiz" required>
+          </div>
+          
+          <div class="form-group full-width">
+            <label for="description">Description</label>
+            <textarea id="description" name="description" placeholder="Short description about the test guidelines..." rows="2"></textarea>
+          </div>
+
+          <div class="form-group">
+            <label for="duration">Duration (Minutes)</label>
+            <input type="number" id="duration" name="duration" min="1" placeholder="60" required>
+          </div>
+
+          <div class="form-group">
+            <label for="totalMarks">Total Marks</label>
+            <input type="number" id="totalMarks" name="totalMarks" min="1" placeholder="100" required>
+          </div>
+
+          <div class="form-group">
+            <label for="passingMarks">Passing Marks</label>
+            <input type="number" id="passingMarks" name="passingMarks" min="0" placeholder="40" required>
+          </div>
+        </div>
+
+        <!-- Question Selector Section -->
+        <div class="question-selection-section mt-4">
+          <label class="font-semibold block mb-2"><i class="fa-solid fa-list-check text-indigo"></i> Select Questions from Bank</label>
+          
+          <% if (questions && questions.length > 0) { %>
+            <div class="scrollable-checklist-container">
+              <% questions.forEach(q => { %>
+                <label class="checkbox-item">
+                  <input type="checkbox" name="questions" value="<%= q._id %>" class="q-checkbox">
+                  <span class="checklist-details">
+                    <span class="subject-tag-micro"><%= q.subject %></span>
+                    <strong class="q-text-snippet"><%= q.text %></strong>
+                    <span class="q-marks-micro">(<%= q.marks %> Marks)</span>
+                  </span>
+                </label>
+              <% }) %>
+            </div>
+          <% } else { %>
+            <div class="alert alert-warning">
+              <i class="fa-solid fa-triangle-exclamation"></i>
+              <span>No questions found in question bank. Please <a href="/admin/questions">add questions</a> first.</span>
+            </div>
+          <% } %>
+        </div>
+      </div>
+
+      <div class="modal-footer flex justify-end gap-2">
+        <button type="button" class="btn btn-outline" onclick="closeExamModal()">Cancel</button>
+        <button type="submit" class="btn btn-primary" id="modal-submit-btn">Save Exam</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Pass Exams Data into JS for Client Population -->
+<script>
+  const examsList = <%- JSON.stringify(exams) %>;
+
+  function openExamModal(mode, examId = '') {
+    const modal = document.getElementById('exam-modal');
+    const form = document.getElementById('exam-form');
+    const titleHeader = document.getElementById('modal-title');
+    const submitBtn = document.getElementById('modal-submit-btn');
+
+    // Reset checkboxes
+    document.querySelectorAll('.q-checkbox').forEach(cb => cb.checked = false);
+
+    if (mode === 'create') {
+      titleHeader.innerText = 'Create New Exam';
+      form.action = '/admin/exams';
+      form.reset();
+      submitBtn.innerText = 'Create Exam';
+    } else if (mode === 'edit') {
+      titleHeader.innerText = 'Edit Exam Profile';
+      form.action = '/admin/exams/' + examId;
+      submitBtn.innerText = 'Save Changes';
+
+      const exam = examsList.find(e => e._id === examId);
+      if (exam) {
+        document.getElementById('title').value = exam.title;
+        document.getElementById('description').value = exam.description || '';
+        document.getElementById('duration').value = exam.duration;
+        document.getElementById('totalMarks').value = exam.totalMarks;
+        document.getElementById('passingMarks').value = exam.passingMarks;
+
+        // Check assigned checkboxes
+        exam.questions.forEach(q => {
+          const cb = document.querySelector(`.q-checkbox[value="${q._id || q}"]`);
+          if (cb) cb.checked = true;
+        });
+      }
+    }
+    modal.style.display = 'flex';
+  }
+
+  function closeExamModal() {
+    document.getElementById('exam-modal').style.display = 'none';
+  }
+
+  async function deleteExam(examId) {
+    if (confirm('Are you sure you want to delete this exam profile? This action is permanent.')) {
+      try {
+        const response = await fetch('/admin/exams/' + examId, {
+          method: 'DELETE'
+        });
+        const data = await response.json();
+        if (data.success) {
+          window.location.reload();
+        } else {
+          alert('Delete failed: ' + data.message);
+        }
+      } catch (err) {
+        console.error(err);
+        alert('An error occurred while deleting.');
+      }
+    }
+  }
+</script>
+
+<%- include('../layouts/footer') %>

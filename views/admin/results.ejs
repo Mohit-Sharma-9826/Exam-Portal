@@ -1,0 +1,98 @@
+<%- include('../layouts/header') %>
+<%- include('../layouts/sidebar') %>
+
+<div class="results-report-page">
+  <div class="card glass-card">
+    <div class="card-header border-bottom flex justify-between align-center flex-wrap gap-4">
+      <div>
+        <h3 class="card-title text-accent"><i class="fa-solid fa-square-poll-vertical"></i> Student Performance Reports</h3>
+        <p class="subtext">Analyze scorecard metrics or download spreadsheet logs.</p>
+      </div>
+
+      <div class="flex gap-2 align-center flex-wrap">
+        <!-- Filter Form -->
+        <form action="/admin/results" method="GET" class="flex align-center gap-2">
+          <select name="examId" onchange="this.form.submit()" class="form-control select-accent">
+            <option value="">-- All Exams --</option>
+            <% exams.forEach(ex => { %>
+              <option value="<%= ex._id %>" <%= selectedExamId && selectedExamId.toString() === ex._id.toString() ? 'selected' : '' %>>
+                <%= ex.title %>
+              </option>
+            <% }) %>
+          </select>
+        </form>
+
+        <!-- CSV Export Link -->
+        <a href="/admin/results/export<%= selectedExamId ? '?examId=' + selectedExamId : '' %>" class="btn btn-secondary">
+          <i class="fa-solid fa-file-excel"></i> Export Report (CSV)
+        </a>
+      </div>
+    </div>
+
+    <div class="card-body">
+      <% if (results && results.length > 0) { %>
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>S.No</th>
+                <th>Student Details</th>
+                <th>Exam Title</th>
+                <th>Score</th>
+                <th>Percentage</th>
+                <th>Attempted</th>
+                <th>Status</th>
+                <th>Completed Date</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% results.forEach((row, idx) => { %>
+                <tr>
+                  <td><%= idx + 1 %></td>
+                  <td>
+                    <div class="flex flex-col">
+                      <strong><%= row.student ? row.student.name : 'Unknown Student' %></strong>
+                      <span class="text-xs text-muted"><%= row.student ? row.student.email : 'N/A' %></span>
+                    </div>
+                  </td>
+                  <td><strong><%= row.exam ? row.exam.title : 'Deleted Exam' %></strong></td>
+                  <td><strong><%= row.score %></strong> / <%= row.exam ? row.exam.totalMarks : 'N/A' %></td>
+                  <td>
+                    <div class="percent-badge-container">
+                      <span class="percent-text font-bold"><%= row.percentage %>%</span>
+                    </div>
+                  </td>
+                  <td>
+                    <span class="text-xs">
+                      Att: <%= row.attemptedQuestions %> (<span class="text-success">C: <%= row.correctAnswers %></span> | <span class="text-danger">I: <%= row.incorrectAnswers %></span>)
+                    </span>
+                  </td>
+                  <td>
+                    <span class="status-badge <%= row.status === 'pass' ? 'status-pass' : 'status-fail' %>">
+                      <%= row.status === 'pass' ? 'PASS' : 'FAIL' %>
+                    </span>
+                  </td>
+                  <td><%= new Date(row.completedAt).toLocaleString() %></td>
+                  <td>
+                    <a href="/student/result/<%= row._id %>" class="btn btn-outline btn-xs" title="View individual scorecard details">
+                      <i class="fa-solid fa-eye"></i> Details
+                    </a>
+                  </td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      <% } else { %>
+        <div class="empty-state">
+          <i class="fa-solid fa-square-poll-horizontal"></i>
+          <h4>No Submissions Found</h4>
+          <p>No results match your selection or no exams have been submitted yet.</p>
+        </div>
+      <% } %>
+    </div>
+  </div>
+</div>
+
+<%- include('../layouts/footer') %>

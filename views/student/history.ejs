@@ -1,0 +1,69 @@
+<%- include('../layouts/header') %>
+<%- include('../layouts/sidebar') %>
+
+<div class="history-page">
+  <div class="card glass-card">
+    <div class="card-header border-bottom">
+      <h3 class="card-title text-accent"><i class="fa-solid fa-history"></i> Your Examination History</h3>
+      <p class="subtext">Overview of all test sessions you have attempted in the portal.</p>
+    </div>
+
+    <div class="card-body">
+      <% if (results && results.length > 0) { %>
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>S.No</th>
+                <th>Exam Name</th>
+                <th>Attempted Date</th>
+                <th>Total Questions</th>
+                <th>Attempted</th>
+                <th>Marks Secured</th>
+                <th>Percentage</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% results.forEach((result, idx) => { %>
+                <tr>
+                  <td><%= idx + 1 %></td>
+                  <td><strong><%= result.exam ? result.exam.title : 'Deleted Exam' %></strong></td>
+                  <td><%= new Date(result.completedAt).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }) %></td>
+                  <td><%= result.totalQuestions %></td>
+                  <td><%= result.attemptedQuestions %></td>
+                  <td><%= result.score %> / <%= result.exam ? result.exam.totalMarks : 'N/A' %></td>
+                  <td>
+                    <div class="percent-badge-container">
+                      <span class="percent-text font-bold"><%= result.percentage %>%</span>
+                    </div>
+                  </td>
+                  <td>
+                    <span class="status-badge <%= result.status === 'pass' ? 'status-pass' : 'status-fail' %>">
+                      <%= result.status === 'pass' ? 'PASS' : 'FAIL' %>
+                    </span>
+                  </td>
+                  <td>
+                    <a href="/student/result/<%= result._id %>" class="btn btn-outline btn-xs" title="View scorecard summary">
+                      <i class="fa-solid fa-eye"></i> Details
+                    </a>
+                  </td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      <% } else { %>
+        <div class="empty-state">
+          <i class="fa-solid fa-calendar-minus"></i>
+          <h4>No Attempts Found</h4>
+          <p>You have not attempted any examination sessions yet.</p>
+          <a href="/student/dashboard" class="btn btn-primary mt-4">View Assigned Exams</a>
+        </div>
+      <% } %>
+    </div>
+  </div>
+</div>
+
+<%- include('../layouts/footer') %>

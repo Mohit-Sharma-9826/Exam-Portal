@@ -1,0 +1,89 @@
+<%- include('../layouts/header') %>
+<%- include('../layouts/sidebar') %>
+
+<div class="leaderboard-page">
+  <div class="card glass-card">
+    <div class="card-header border-bottom flex justify-between align-center flex-wrap gap-2">
+      <div>
+        <h3 class="card-title text-accent"><i class="fa-solid fa-trophy"></i> Exam Standings & Leaderboard</h3>
+        <p class="subtext">Compare results with peer student accomplishments.</p>
+      </div>
+
+      <!-- Exam Selection Filter -->
+      <div class="filter-box">
+        <form action="/student/leaderboard" method="GET" class="flex align-center gap-2">
+          <label for="examSelect" class="font-medium">Select Exam:</label>
+          <select name="examId" id="examSelect" onchange="this.form.submit()" class="form-control select-accent">
+            <% if (exams && exams.length > 0) { %>
+              <% exams.forEach(exam => { %>
+                <option value="<%= exam._id %>" <%= selectedExamId && selectedExamId.toString() === exam._id.toString() ? 'selected' : '' %>>
+                  <%= exam.title %>
+                </option>
+              <% }) %>
+            <% } else { %>
+              <option value="">No Active Exams</option>
+            <% } %>
+          </select>
+        </form>
+      </div>
+    </div>
+
+    <div class="card-body">
+      <% if (standings && standings.length > 0) { %>
+        <div class="table-responsive">
+          <table class="data-table leaderboard-table">
+            <thead>
+              <tr>
+                <th style="width: 80px;">Rank</th>
+                <th>Student Name</th>
+                <th>Email ID</th>
+                <th>Marks Secured</th>
+                <th>Percentage</th>
+                <th>Completion Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% standings.forEach((row, idx) => { %>
+                <tr class="<%= idx === 0 ? 'rank-gold' : idx === 1 ? 'rank-silver' : idx === 2 ? 'rank-bronze' : '' %>">
+                  <td class="rank-cell">
+                    <% if (idx === 0) { %>
+                      <span class="medal-icon text-amber"><i class="fa-solid fa-medal"></i> 1</span>
+                    <% } else if (idx === 1) { %>
+                      <span class="medal-icon text-slate"><i class="fa-solid fa-medal"></i> 2</span>
+                    <% } else if (idx === 2) { %>
+                      <span class="medal-icon text-bronze"><i class="fa-solid fa-medal"></i> 3</span>
+                    <% } else { %>
+                      <strong><%= idx + 1 %></strong>
+                    <% } %>
+                  </td>
+                  <td>
+                    <div class="student-name-badge">
+                      <!-- <span class="avatar-letter"><%= row.student ? row.student.name.charAt(0).toUpperCase() : 'U' %></span> -->
+                      <span><%= row.student ? row.student.name : 'Unknown Student' %></span>
+                    </div>
+                  </td>
+                  <td><%= row.student ? row.student.email : 'N/A' %></td>
+                  <td><strong><%= row.score %></strong></td>
+                  <td>
+                    <div class="percent-badge-container">
+                      <span class="percent-text font-bold"><%= row.percentage %>%</span>
+                    </div>
+                  </td>
+                  <td><%= new Date(row.completedAt).toLocaleDateString() %></td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      <% } else { %>
+        <div class="empty-state">
+          <i class="fa-solid fa-hourglass-empty"></i>
+          <h4>No Rankings Available</h4>
+          <p>No results have been submitted for this examination yet. Be the first to secure a spot!</p>
+        </div>
+      <% } %>
+    </div>
+  </div>
+</div>
+
+<%- include('../layouts/footer') %>
