@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node app.js",
     "dev": "nodemon app.js",
-    "seed": "node utils/seed.js"
+    "seed": "node utils/seed.js",
+    "admin": "node utils/addAdmin.js"
   },
   "keywords": [
     "examination",

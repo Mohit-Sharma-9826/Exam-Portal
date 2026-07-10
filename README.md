@@ -99,6 +99,12 @@ MONGO_URI=your_mongodb_connection_string
 SESSION_SECRET=your_secret_key
 ```
 
+### Add Admins directly
+
+```bash
+npm run admin
+```
+
 ### Start the application
 
 ```bash
