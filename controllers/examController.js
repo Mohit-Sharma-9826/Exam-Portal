@@ -4,7 +4,6 @@ const Result = require('../models/Result');
 const User = require('../models/User');
 const ActivityLog = require('../models/ActivityLog');
 const { parseQuestionsCSV } = require('../utils/csvParser');
-// const fs = require('fs');
 
 // Helper to log admin actions
 const logActivity = async (adminId, action, details, req) => {
@@ -21,9 +20,7 @@ const logActivity = async (adminId, action, details, req) => {
   }
 };
 
-// ==========================================
 // EXAM CONTROLLERS
-// ==========================================
 
 // @desc    View Exams list
 exports.getExams = async (req, res, next) => {
@@ -116,9 +113,7 @@ exports.deleteExam = async (req, res, next) => {
   }
 };
 
-// ==========================================
 // QUESTION CONTROLLERS
-// ==========================================
 
 // @desc    View Question Bank
 exports.getQuestions = async (req, res, next) => {
@@ -231,30 +226,20 @@ exports.uploadQuestionsCSV = async (req, res, next) => {
     const questionsList = await parseQuestionsCSV(req.file.buffer, req.user._id);
     
     if (questionsList.length === 0) {
-      // Clean up temp file
-      // fs.unlinkSync(req.file.path);
       return res.status(400).json({ success: false, message: 'CSV parser found no valid question rows. Make sure headers match.' });
     }
 
     const inserted = await Question.insertMany(questionsList);
     
-    // Clean up temp file
-    // fs.unlinkSync(req.file.path);
 
     await logActivity(req.user._id, 'IMPORT_QUESTIONS_CSV', `Imported ${inserted.length} questions from CSV`, req);
     res.json({ success: true, count: inserted.length });
   } catch (error) {
-    // Clean up file if present
-    // if (req.file && fs.existsSync(req.file.path)) {
-    //   fs.unlinkSync(req.file.path);
-    // }
     next(error);
   }
 };
 
-// ==========================================
 // REPORTS & EXPORT CONTROLLERS
-// ==========================================
 
 // @desc    View Results list
 exports.getResults = async (req, res, next) => {
