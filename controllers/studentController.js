@@ -263,9 +263,6 @@ exports.submitExamLogic = async (studentId, examId, res, next) => {
       status
     });
 
-    // Clean up response session
-    await StudentResponse.deleteOne({ _id: session._id });
-
     // Redirect or output JSON depending on API
     res.redirect(`/student/result/${result._id}`);
   } catch (error) {
