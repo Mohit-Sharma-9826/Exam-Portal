@@ -25,6 +25,8 @@
   --status-pass-text: #065f46;
   --status-fail-bg: #fee2e2;
   --status-fail-text: #991b1b;
+  --status-warning-bg: #fef3c7;
+  --status-warning-text: #92400e;
 }
 
 :root[data-theme="dark"] {
@@ -50,6 +52,8 @@
   --status-pass-text: #34d399;
   --status-fail-bg: rgba(239, 68, 68, 0.2);
   --status-fail-text: #f87171;
+  --status-warning-bg: rgba(245, 158, 11, 0.2);
+  --status-warning-text: #fbbf24;
 }
 
 * {
@@ -144,7 +148,7 @@ body {
   flex-direction: column;
   z-index: 100;
   height: 100vh;
-  overflow-y: auto;
+  overflow: hidden;
 }
 
 .sidebar-header {
@@ -190,8 +194,8 @@ body {
 }
 
 .user-avatar {
-  width: 48px;
-  height: 48px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   background: var(--accent-gradient);
   color: white;
@@ -219,6 +223,7 @@ body {
 .sidebar-nav {
   flex: 1;
   padding: 1.5rem 1rem;
+  overflow-y: auto;
 }
 
 .sidebar-nav ul {
@@ -579,6 +584,11 @@ body {
 .status-fail {
   background-color: var(--status-fail-bg);
   color: var(--status-fail-text);
+}
+
+.status-warning {
+  background-color: var(--status-warning-bg);
+  color: var(--status-warning-text);
 }
 
 .badge {
@@ -1382,6 +1392,7 @@ body {
     left: -280px;
     top: 0;
     height: 100vh;
+    height: 100dvh;
     transition: left 0.3s ease;
   }
   
@@ -1410,5 +1421,188 @@ body {
 .subject-checkbox-badge:hover {
   border-color: var(--accent-color) !important;
   background-color: var(--bg-tertiary);
+}
+
+/* ==========================================================================
+   COMPREHENSIVE RESPONSIVENESS AND MOBILE-FIRST OVERRIDES
+   ========================================================================== */
+
+/* 1. Viewport & Scrolling Rules */
+@media (max-width: 768px) {
+  body, .app-container {
+    height: auto !important;
+    overflow: visible !important;
+  }
+  
+  .main-content {
+    height: auto !important;
+    overflow: visible !important;
+  }
+}
+
+/* 2. Responsive Table Wrappers & Spacing */
+@media (max-width: 768px) {
+  .table-responsive {
+    margin-bottom: 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background-color: var(--bg-secondary);
+  }
+  
+  .data-table th, .data-table td {
+    padding: 0.75rem 1rem !important;
+    font-size: 0.85rem !important;
+  }
+
+  .content-body {
+    padding: 1rem !important;
+  }
+  
+  .stats-grid {
+    grid-template-columns: 1fr !important;
+    gap: 1rem !important;
+  }
+}
+
+/* 3. Sidebar Backdrop Overlay */
+.sidebar-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(2px);
+  z-index: 99; /* Below sidebar (100) but above everything else */
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* 4. Form and Modal Responsiveness */
+@media (max-width: 576px) {
+  .modal-overlay {
+    padding: 0.75rem !important;
+    align-items: flex-start !important;
+    overflow-y: auto !important;
+  }
+
+  .modal-card {
+    margin: 1.5rem auto !important;
+    max-height: none !important;
+  }
+
+  .auth-card {
+    padding: 1.5rem !important;
+    border-radius: 12px !important;
+  }
+}
+
+/* 5. Exam Interface Responsiveness */
+@media (max-width: 768px) {
+  .exam-portal-wrapper {
+    height: auto !important;
+    min-height: 100vh;
+    overflow: visible !important;
+  }
+
+  .exam-header {
+    height: auto !important;
+    padding: 1rem !important;
+    flex-direction: column !important;
+    gap: 0.75rem !important;
+    align-items: stretch !important;
+    text-align: center !important;
+  }
+
+  .exam-logo-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .exam-timer-section {
+    justify-content: center !important;
+    width: fit-content;
+    margin: 0 auto;
+  }
+
+  .exam-main-layout {
+    flex-direction: column !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  .exam-left-column {
+    border-right: none !important;
+    border-bottom: 1px solid var(--border-color) !important;
+    height: auto !important;
+  }
+
+  .question-workspace {
+    padding: 1.5rem 1rem !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  .question-text {
+    font-size: 1.1rem !important;
+  }
+
+  .option-card {
+    padding: 1rem !important;
+    font-size: 0.9rem !important;
+  }
+
+  .exam-actions-footer {
+    height: auto !important;
+    padding: 1rem !important;
+    flex-direction: column !important;
+    gap: 0.75rem !important;
+    align-items: stretch !important;
+  }
+
+  .exam-actions-footer .footer-left,
+  .exam-actions-footer .footer-right {
+    flex-direction: row !important;
+    justify-content: center !important;
+    width: 100% !important;
+    gap: 0.5rem !important;
+  }
+
+  .exam-actions-footer .btn {
+    flex: 1 !important;
+    padding: 0.65rem 0.5rem !important;
+    font-size: 0.85rem !important;
+    min-height: 44px; /* Touch-friendly size */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .exam-right-column {
+    width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
+    border-top: 1px solid var(--border-color) !important;
+  }
+
+  .student-profile-widget {
+    padding: 1rem !important;
+    justify-content: center;
+  }
+
+  .palette-grid {
+    padding: 1rem !important;
+  }
+
+  .palette-counters {
+    padding: 1rem !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 0.75rem !important;
+  }
 }
 

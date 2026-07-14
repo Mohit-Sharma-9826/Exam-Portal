@@ -55,24 +55,46 @@
                     <% } %>
                   </td>
                   <td>
-                    <span class="status-badge <%= item.user.isActive ? 'status-pass' : 'status-fail' %>">
-                      <%= item.user.isActive ? 'Active' : 'Inactive' %>
-                    </span>
+                    <% if (item.user.isApproved === false) { %>
+                      <span class="status-badge status-warning">
+                        Pending Approval
+                      </span>
+                    <% } else { %>
+                      <span class="status-badge <%= item.user.isActive ? 'status-pass' : 'status-fail' %>">
+                        <%= item.user.isActive ? 'Active' : 'Inactive' %>
+                      </span>
+                    <% } %>
                   </td>
                   <td>
                     <div class="actions-group flex gap-2">
-                      <!-- Assign Exam Button -->
-                      <button class="btn btn-outline btn-xs" onclick="openAssignModal('<%= item.user._id %>', '<%= item.user.name %>')">
-                        <i class="fa-solid fa-plus-circle"></i> Assign Exam
-                      </button>
+                      <% if (item.user.isApproved === false) { %>
+                        <!-- Approve Request Form -->
+                        <form action="/admin/students/<%= item.user._id %>/approve" method="POST" style="display: inline;">
+                          <button type="submit" class="btn btn-xs btn-success">
+                            <i class="fa-solid fa-check"></i> Approve
+                          </button>
+                        </form>
 
-                      <!-- Toggle Status Form -->
-                      <form action="/admin/students/<%= item.user._id %>/toggle" method="POST" style="display: inline;">
-                        <button type="submit" class="btn btn-xs <%= item.user.isActive ? 'btn-danger' : 'btn-success' %>">
-                          <i class="fa-solid <%= item.user.isActive ? 'fa-ban' : 'fa-check' %>"></i>
-                          <%= item.user.isActive ? 'Deactivate' : 'Activate' %>
+                        <!-- Reject Request Form -->
+                        <form action="/admin/students/<%= item.user._id %>/reject" method="POST" style="display: inline;" onsubmit="return confirm('Are you sure you want to reject and delete this registration request?');">
+                          <button type="submit" class="btn btn-xs btn-danger">
+                            <i class="fa-solid fa-trash-can"></i> Reject
+                          </button>
+                        </form>
+                      <% } else { %>
+                        <!-- Assign Exam Button -->
+                        <button class="btn btn-outline btn-xs" onclick="openAssignModal('<%= item.user._id %>', '<%= item.user.name %>')">
+                          <i class="fa-solid fa-plus-circle"></i> Assign Exam
                         </button>
-                      </form>
+
+                        <!-- Toggle Status Form -->
+                        <form action="/admin/students/<%= item.user._id %>/toggle" method="POST" style="display: inline;">
+                          <button type="submit" class="btn btn-xs <%= item.user.isActive ? 'btn-danger' : 'btn-success' %>">
+                            <i class="fa-solid <%= item.user.isActive ? 'fa-ban' : 'fa-check' %>"></i>
+                            <%= item.user.isActive ? 'Deactivate' : 'Activate' %>
+                          </button>
+                        </form>
+                      <% } %>
                     </div>
                   </td>
                 </tr>

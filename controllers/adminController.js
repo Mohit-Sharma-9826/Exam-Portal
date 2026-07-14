@@ -257,3 +257,79 @@ exports.getLogs = async (req, res, next) => {
     next(error);
   }
 };
+
+// @desc    Approve a pending student registration
+exports.approveStudent = async (req, res, next) => {
+  try {
+    // Verify student is managed by this admin
+    const profile = await StudentProfile.findOne({ user: req.params.id, assignedAdmin: req.user._id });
+    if (!profile) {
+      if (req.originalUrl.startsWith('/api/')) {
+        return res.status(403).json({ success: false, message: 'Not authorized to manage this student' });
+      }
+      return res.status(403).render('error', { title: 'Forbidden', message: 'Not authorized to manage this student', statusCode: 403, user: req.user });
+    }
+
+    const user = await User.findById(req.params.id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'Student not found' });
+    }
+
+    user.isApproved = true;
+    user.isActive = true; // Make active by default upon approval
+    await user.save();
+
+    await logActivity(
+      req.user._id,
+      'APPROVE_STUDENT',
+      `Approved registration request for student ${user.name} (${user.email})`,
+      req
+    );
+
+    if (req.originalUrl.startsWith('/api/')) {
+      return res.json({ success: true, message: 'Student approved successfully' });
+    }
+
+    res.redirect('/admin/students');
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Reject and delete a pending student registration
+exports.rejectStudent = async (req, res, next) => {
+  try {
+    // Verify student is managed by this admin
+    const profile = await StudentProfile.findOne({ user: req.params.id, assignedAdmin: req.user._id });
+    if (!profile) {
+      if (req.originalUrl.startsWith('/api/')) {
+        return res.status(403).json({ success: false, message: 'Not authorized to manage this student' });
+      }
+      return res.status(403).render('error', { title: 'Forbidden', message: 'Not authorized to manage this student', statusCode: 403, user: req.user });
+    }
+
+    const user = await User.findById(req.params.id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'Student not found' });
+    }
+
+    // Delete records
+    await StudentProfile.deleteOne({ user: req.params.id });
+    await User.deleteOne({ _id: req.params.id });
+
+    await logActivity(
+      req.user._id,
+      'REJECT_STUDENT',
+      `Rejected and deleted registration request for student ${user.name} (${user.email})`,
+      req
+    );
+
+    if (req.originalUrl.startsWith('/api/')) {
+      return res.json({ success: true, message: 'Student registration rejected and deleted' });
+    }
+
+    res.redirect('/admin/students');
+  } catch (error) {
+    next(error);
+  }
+};

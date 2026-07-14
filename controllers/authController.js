@@ -134,7 +134,8 @@ exports.registerStudent = async (req, res, next) => {
       name,
       email,
       password,
-      role: 'student'
+      role: 'student',
+      isApproved: false // Requires admin approval
     });
 
     // Create student profile
@@ -145,7 +146,10 @@ exports.registerStudent = async (req, res, next) => {
       assignedAdmin: adminId
     });
 
-    sendTokenCookie(user, 201, res, '/student/dashboard');
+    if (req_is_api(req)) {
+      return res.status(201).json({ success: true, message: 'Registration successful. Waiting for admin approval.' });
+    }
+    res.redirect('/auth/login?success=pending_approval');
   } catch (error) {
     next(error);
   }
@@ -173,6 +177,12 @@ exports.loginStudent = async (req, res, next) => {
     if (!user.isActive) {
       if (req_is_api(req)) return res.status(403).json({ success: false, message: 'Your account is deactivated. Please contact administrator.' });
       return res.render('auth/student-login', { error: 'Your account is deactivated. Please contact administrator.', success: null });
+    }
+
+    // Verify approval status
+    if (!user.isApproved) {
+      if (req_is_api(req)) return res.status(403).json({ success: false, message: 'Your account is pending approval by your administrator.' });
+      return res.render('auth/student-login', { error: 'Your account is pending approval by your administrator.', success: null });
     }
 
     // Match password

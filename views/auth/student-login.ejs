@@ -21,7 +21,15 @@
     <% if (success) { %>
       <div class="alert alert-success">
         <i class="fa-solid fa-circle-check"></i>
-        <span><%= success === 'logged_out' ? 'Logged out successfully' : success %></span>
+        <span>
+          <% if (success === 'logged_out') { %>
+            Logged out successfully
+          <% } else if (success === 'pending_approval') { %>
+            Registration successful! Your account is waiting for approval from your selected administrator.
+          <% } else { %>
+            <%= success %>
+          <% } %>
+        </span>
       </div>
     <% } %>
 

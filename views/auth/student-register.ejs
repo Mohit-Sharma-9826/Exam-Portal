@@ -44,7 +44,7 @@
         <select id="adminId" name="adminId" required class="form-control">
           <option value="">-- Choose Instructor/Admin --</option>
           <% admins.forEach(admin => { %>
-            <option value="<%= admin._id %>"><%= admin.name %> (<%= admin.email %>)</option>
+            <option value="<%= admin._id %>"><%= admin.name %></option>
           <% }) %>
         </select>
       </div>
