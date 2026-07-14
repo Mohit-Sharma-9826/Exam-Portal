@@ -33,20 +33,20 @@ async function getEmployeeDetails() {
         
         rl.close();
         
-        const adminUser = await User.create({
+        const superAdminUser = await User.create({
             name: employee.name,
             email: employee.email,
             password: employee.password, // Will be hashed by pre-save hook
-            role: 'admin'
+            role: 'superAdmin'
         });
         
         await AdminProfile.create({
-            user: adminUser._id,
+            user: superAdminUser._id,
             employeeId: employee.empId,
             department: employee.department
         });
         
-        console.log("Admin created successfully.");
+        console.log("Super Admin created successfully.");
     }
     catch (err) {
         console.error(err);
