@@ -8,6 +8,11 @@
         <h3 class="card-title text-accent"><i class="fa-solid fa-users"></i> Student Database Management</h3>
         <p class="subtext">Configure permissions, toggle status controls, or assign exam access keys.</p>
       </div>
+      <% if (students && students.length > 0 && exams && exams.length > 0) { %>
+        <button class="btn btn-secondary" onclick="openAssignAllModal()">
+          <i class="fa-solid fa-users-gear"></i> Assign Exam to All
+        </button>
+      <% } %>
     </div>
 
     <div class="card-body">
@@ -114,6 +119,34 @@
   </div>
 </div>
 
+<!-- Assign Exam to All Modal Overlay -->
+<div class="modal-overlay" id="assign-all-modal" style="display: none;">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h3>Assign Exam to All Students</h3>
+      <button class="modal-close" onclick="closeAssignAllModal()">&times;</button>
+    </div>
+    <form action="/admin/students/assign-all" method="POST">
+      <div class="modal-body">
+        <p>This action will assign the chosen exam to <strong>all registered student profiles</strong> who do not have it assigned yet.</p>
+        <div class="form-group mt-4">
+          <label for="examIdSelectAll">Select Exam Profile:</label>
+          <select name="examId" id="examIdSelectAll" class="form-control" required>
+            <option value="">-- Choose Exam --</option>
+            <% exams.forEach(exam => { %>
+              <option value="<%= exam._id %>"><%= exam.title %> (<%= exam.duration %> min, <%= exam.questions.length %> Qs)</option>
+            <% }) %>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer flex justify-between">
+        <button type="button" class="btn btn-outline" onclick="closeAssignAllModal()">Cancel</button>
+        <button type="submit" class="btn btn-secondary">Assign to All <i class="fa-solid fa-circle-check"></i></button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <script>
   function openAssignModal(studentId, studentName) {
     const modal = document.getElementById('assign-modal');
@@ -127,6 +160,14 @@
 
   function closeAssignModal() {
     document.getElementById('assign-modal').style.display = 'none';
+  }
+
+  function openAssignAllModal() {
+    document.getElementById('assign-all-modal').style.display = 'flex';
+  }
+
+  function closeAssignAllModal() {
+    document.getElementById('assign-all-modal').style.display = 'none';
   }
 </script>
 

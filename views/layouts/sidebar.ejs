@@ -22,13 +22,21 @@
 
     <nav class="sidebar-nav">
       <ul>
-        <% if (user.role === 'admin') { %>
+        <% if (user.role === 'admin' || user.role === 'superAdmin') { %>
           <li>
             <a href="/admin/dashboard" class="<%= req_path === '/admin/dashboard' ? 'active' : '' %>">
               <i class="fa-solid fa-chart-pie"></i>
               <span>Dashboard</span>
             </a>
           </li>
+          <% if (user.role === 'superAdmin') { %>
+            <li>
+              <a href="/superadmin/admins" class="<%= req_path === '/superadmin/admins' ? 'active' : '' %>">
+                <i class="fa-solid fa-users-gear"></i>
+                <span>Admin Management</span>
+              </a>
+            </li>
+          <% } %>
           <li>
             <a href="/admin/students" class="<%= req_path === '/admin/students' ? 'active' : '' %>">
               <i class="fa-solid fa-users"></i>

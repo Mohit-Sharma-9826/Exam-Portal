@@ -14,6 +14,7 @@ router.get('/logs', adminController.getLogs);
 
 // Student Management
 router.get('/students', adminController.getStudents);
+router.post('/students/assign-all', adminController.assignExamToAll);
 router.post('/students/:id/assign', adminController.assignExam);
 router.post('/students/:id/toggle', adminController.toggleStudentStatus);
 

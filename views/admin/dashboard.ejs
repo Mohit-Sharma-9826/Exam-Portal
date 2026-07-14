@@ -86,117 +86,129 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
   document.addEventListener('DOMContentLoaded', function() {
-    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-    const textColor = isDark ? '#f3f4f6' : '#1f2937';
-    const gridColor = isDark ? '#374151' : '#e5e7eb';
-    
-    // 1. Pass Fail Chart
-    <% if (charts.passCount > 0 || charts.failCount > 0) { %>
-      const pfCtx = document.getElementById('passFailChart').getContext('2d');
-      new Chart(pfCtx, {
-        type: 'pie',
-        data: {
-          labels: ['Pass', 'Fail'],
-          datasets: [{
-            data: [<%= charts.passCount %>, <%= charts.failCount %>],
-            backgroundColor: ['#10b981', '#ef4444'],
-            borderWidth: 1,
-            borderColor: isDark ? '#1f2937' : '#ffffff'
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              position: 'bottom',
-              labels: { color: textColor, font: { family: 'Outfit' } }
-            }
-          }
-        }
-      });
-    <% } %>
+    let pfChart, epChart, subChart;
 
-    // 2. Exam Performance Chart
-    <% if (charts.examPerformance.length > 0) { %>
-      const epCtx = document.getElementById('examPerformanceChart').getContext('2d');
-      const examTitles = [];
-      const examAverages = [];
-      <% charts.examPerformance.forEach(perf => { %>
-        examTitles.push('<%= perf.title %>');
-        examAverages.push(<%= perf.avgPercentage %>);
-      <% }) %>
+    function renderCharts() {
+      const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+      const textColor = isDark ? '#f8fafc' : '#1e293b';
+      const gridColor = isDark ? '#334155' : '#e2e8f0';
 
-      new Chart(epCtx, {
-        type: 'bar',
-        data: {
-          labels: examTitles,
-          datasets: [{
-            label: 'Average %',
-            data: examAverages,
-            backgroundColor: 'rgba(99, 102, 241, 0.75)',
-            borderColor: '#6366f1',
-            borderWidth: 1.5,
-            borderRadius: 6
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: { display: false }
+      // Clean up previous charts to prevent canvas ghosting
+      if (pfChart) pfChart.destroy();
+      if (epChart) epChart.destroy();
+      if (subChart) subChart.destroy();
+      
+      // 1. Pass Fail Chart
+      <% if (charts.passCount > 0 || charts.failCount > 0) { %>
+        const pfCtx = document.getElementById('passFailChart').getContext('2d');
+        pfChart = new Chart(pfCtx, {
+          type: 'pie',
+          data: {
+            labels: ['Pass', 'Fail'],
+            datasets: [{
+              data: [<%= charts.passCount %>, <%= charts.failCount %>],
+              backgroundColor: ['#10b981', '#ef4444'],
+              borderWidth: 1,
+              borderColor: isDark ? '#1e293b' : '#ffffff'
+            }]
           },
-          scales: {
-            x: {
-              grid: { color: gridColor },
-              ticks: { color: textColor, font: { family: 'Outfit' } }
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                position: 'bottom',
+                labels: { color: textColor, font: { family: 'Outfit' } }
+              }
+            }
+          }
+        });
+      <% } %>
+
+      // 2. Exam Performance Chart
+      <% if (charts.examPerformance.length > 0) { %>
+        const epCtx = document.getElementById('examPerformanceChart').getContext('2d');
+        const examTitles = [];
+        const examAverages = [];
+        <% charts.examPerformance.forEach(perf => { %>
+          examTitles.push('<%= perf.title %>');
+          examAverages.push(<%= perf.avgPercentage %>);
+        <% }) %>
+
+        epChart = new Chart(epCtx, {
+          type: 'bar',
+          data: {
+            labels: examTitles,
+            datasets: [{
+              label: 'Average %',
+              data: examAverages,
+              backgroundColor: 'rgba(99, 102, 241, 0.75)',
+              borderColor: '#6366f1',
+              borderWidth: 1.5,
+              borderRadius: 6
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false }
             },
-            y: {
-              min: 0,
-              max: 100,
-              grid: { color: gridColor },
-              ticks: { color: textColor, font: { family: 'Outfit' } }
+            scales: {
+              x: {
+                grid: { color: gridColor },
+                ticks: { color: textColor, font: { family: 'Outfit' } }
+              },
+              y: {
+                min: 0,
+                max: 100,
+                grid: { color: gridColor },
+                ticks: { color: textColor, font: { family: 'Outfit' } }
+              }
             }
           }
-        }
-      });
-    <% } %>
+        });
+      <% } %>
 
-    // 3. Subject Breakdown Chart
-    <% if (charts.subjectBreakdown.length > 0) { %>
-      const subCtx = document.getElementById('subjectChart').getContext('2d');
-      const subjects = [];
-      const subjectCounts = [];
-      <% charts.subjectBreakdown.forEach(sub => { %>
-        subjects.push('<%= sub._id %>');
-        subjectCounts.push(<%= sub.count %>);
-      <% }) %>
+      // 3. Subject Breakdown Chart
+      <% if (charts.subjectBreakdown.length > 0) { %>
+        const subCtx = document.getElementById('subjectChart').getContext('2d');
+        const subjects = [];
+        const subjectCounts = [];
+        <% charts.subjectBreakdown.forEach(sub => { %>
+          subjects.push('<%= sub._id %>');
+          subjectCounts.push(<%= sub.count %>);
+        <% }) %>
 
-      new Chart(subCtx, {
-        type: 'doughnut',
-        data: {
-          labels: subjects,
-          datasets: [{
-            data: subjectCounts,
-            backgroundColor: [
-              '#6366f1', '#10b981', '#f59e0b', '#ec4899', '#3b82f6', '#8b5cf6'
-            ],
-            borderWidth: 1,
-            borderColor: isDark ? '#1f2937' : '#ffffff'
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              position: 'bottom',
-              labels: { color: textColor, font: { family: 'Outfit' } }
+        subChart = new Chart(subCtx, {
+          type: 'doughnut',
+          data: {
+            labels: subjects,
+            datasets: [{
+              data: subjectCounts,
+              backgroundColor: [
+                '#6366f1', '#10b981', '#f59e0b', '#ec4899', '#3b82f6', '#8b5cf6'
+              ],
+              borderWidth: 1,
+              borderColor: isDark ? '#1e293b' : '#ffffff'
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                position: 'bottom',
+                labels: { color: textColor, font: { family: 'Outfit' } }
+              }
             }
           }
-        }
-      });
-    <% } %>
+        });
+      <% } %>
+    }
+
+    renderCharts();
+    window.addEventListener('themeChanged', renderCharts);
   });
 </script>
 

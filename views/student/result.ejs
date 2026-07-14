@@ -75,46 +75,56 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
   document.addEventListener('DOMContentLoaded', function() {
-    const ctx = document.getElementById('resultChart').getContext('2d');
-    
     const correct = <%= result.correctAnswers %>;
     const incorrect = <%= result.incorrectAnswers %>;
     const unattempted = <%= result.totalQuestions - result.attemptedQuestions %>;
 
-    // Use HSL colors consistent with the CSS theme variable palettes
-    new Chart(ctx, {
-      type: 'doughnut',
-      data: {
-        labels: ['Correct', 'Incorrect', 'Unattempted'],
-        datasets: [{
-          data: [correct, incorrect, unattempted],
-          backgroundColor: [
-            '#10b981', // Emerald green
-            '#ef4444', // Rose red
-            '#6b7280'  // Slate grey
-          ],
-          borderWidth: 2,
-          borderColor: document.documentElement.getAttribute('data-theme') === 'dark' ? '#1f2937' : '#ffffff',
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: {
-            position: 'bottom',
-            labels: {
-              color: document.documentElement.getAttribute('data-theme') === 'dark' ? '#f3f4f6' : '#1f2937',
-              font: {
-                family: 'Outfit',
-                size: 13
+    let resChart;
+
+    function renderResultChart() {
+      const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+      const textColor = isDark ? '#f8fafc' : '#1e293b';
+      const ctx = document.getElementById('resultChart').getContext('2d');
+
+      if (resChart) resChart.destroy();
+
+      resChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: ['Correct', 'Incorrect', 'Unattempted'],
+          datasets: [{
+            data: [correct, incorrect, unattempted],
+            backgroundColor: [
+              '#10b981', // Emerald green
+              '#ef4444', // Rose red
+              '#6b7280'  // Slate grey
+            ],
+            borderWidth: 2,
+            borderColor: isDark ? '#1e293b' : '#ffffff',
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: {
+                color: textColor,
+                font: {
+                  family: 'Outfit',
+                  size: 13
+                }
               }
             }
-          }
-        },
-        cutout: '70%'
-      }
-    });
+          },
+          cutout: '70%'
+        }
+      });
+    }
+
+    renderResultChart();
+    window.addEventListener('themeChanged', renderResultChart);
   });
 </script>
 

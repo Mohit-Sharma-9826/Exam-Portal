@@ -43,47 +43,90 @@ const req_is_api = (req) => {
   return req.originalUrl.startsWith('/api/');
 };
 
+// Helper to redirect authenticated users to their correct dashboards based on role
+const redirectDashboard = async (token, res) => {
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'super_secret_exam_portal_jwt_secret_key_2026');
+    const user = await User.findById(decoded.id);
+    if (user && user.isActive) {
+      if (user.role === 'admin' || user.role === 'superAdmin') {
+        res.redirect('/admin/dashboard');
+        return true;
+      } else if (user.role === 'student') {
+        res.redirect('/student/dashboard');
+        return true;
+      }
+    }
+    res.clearCookie('token');
+    return false;
+  } catch (err) {
+    res.clearCookie('token');
+    return false;
+  }
+};
+
 // @desc    Render Student Login
-exports.getLogin = (req, res) => {
-  if (req.cookies.token) {
-    return res.redirect('/student/dashboard');
+exports.getLogin = async (req, res) => {
+  if (req.cookies && req.cookies.token) {
+    const redirected = await redirectDashboard(req.cookies.token, res);
+    if (redirected) return;
   }
   res.render('auth/student-login', { error: req.query.error || null, success: req.query.success || null });
 };
 
 // @desc    Render Student Registration
-exports.getRegister = (req, res) => {
-  if (req.cookies.token) {
-    return res.redirect('/student/dashboard');
+exports.getRegister = async (req, res, next) => {
+  if (req.cookies && req.cookies.token) {
+    const redirected = await redirectDashboard(req.cookies.token, res);
+    if (redirected) return;
   }
-  res.render('auth/student-register', { error: req.query.error || null });
+  try {
+    const admins = await User.find({ role: 'admin', isActive: true }).select('name email');
+    res.render('auth/student-register', { error: req.query.error || null, admins });
+  } catch (error) {
+    next(error);
+  }
 };
 
 // @desc    Render Admin Login
-exports.getAdminLogin = (req, res) => {
-  if (req.cookies.token) {
-    return res.redirect('/admin/dashboard');
+exports.getAdminLogin = async (req, res) => {
+  if (req.cookies && req.cookies.token) {
+    const redirected = await redirectDashboard(req.cookies.token, res);
+    if (redirected) return;
   }
   res.render('auth/admin-login', { error: req.query.error || null });
 };
 
 // @desc    Register Student
 exports.registerStudent = async (req, res, next) => {
-  const { name, email, password, rollNumber, batch } = req.body;
+  const { name, email, password, rollNumber, batch, adminId } = req.body;
 
   try {
+    const admins = await User.find({ role: 'admin', isActive: true }).select('name email');
+
     // Check if user exists
     let userExists = await User.findOne({ email });
     if (userExists) {
       if (req_is_api(req)) return res.status(400).json({ success: false, message: 'Email already registered' });
-      return res.render('auth/student-register', { error: 'Email already registered' });
+      return res.render('auth/student-register', { error: 'Email already registered', admins });
     }
 
     // Check if roll number exists
     let rollExists = await StudentProfile.findOne({ rollNumber });
     if (rollExists) {
       if (req_is_api(req)) return res.status(400).json({ success: false, message: 'Roll number already exists' });
-      return res.render('auth/student-register', { error: 'Roll number already exists' });
+      return res.render('auth/student-register', { error: 'Roll number already exists', admins });
+    }
+
+    // Verify adminId is provided and active
+    if (!adminId) {
+      if (req_is_api(req)) return res.status(400).json({ success: false, message: 'Please select an administrator' });
+      return res.render('auth/student-register', { error: 'Please select an administrator', admins });
+    }
+    const adminExists = await User.findOne({ _id: adminId, role: 'admin', isActive: true });
+    if (!adminExists) {
+      if (req_is_api(req)) return res.status(400).json({ success: false, message: 'Invalid administrator selected' });
+      return res.render('auth/student-register', { error: 'Invalid administrator selected', admins });
     }
 
     // Create base user
@@ -98,7 +141,8 @@ exports.registerStudent = async (req, res, next) => {
     await StudentProfile.create({
       user: user._id,
       rollNumber,
-      batch
+      batch,
+      assignedAdmin: adminId
     });
 
     sendTokenCookie(user, 201, res, '/student/dashboard');
@@ -157,7 +201,7 @@ exports.loginAdmin = async (req, res, next) => {
 
     // Find user
     const user = await User.findOne({ email }).select('+password');
-    if (!user || user.role !== 'admin') {
+    if (!user || (user.role !== 'admin' && user.role !== 'superAdmin')) {
       if (req_is_api(req)) return res.status(401).json({ success: false, message: 'Invalid credentials' });
       return res.render('auth/admin-login', { error: 'Invalid credentials' });
     }

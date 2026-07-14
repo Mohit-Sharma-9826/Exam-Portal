@@ -8,7 +8,7 @@
   --bg-tertiary: #f1f5f9;
   --text-primary: #0f172a;
   --text-secondary: #334155;
-  --text-muted: #64748b;
+  --text-muted: #475569;
   
   --accent-color: #6366f1;
   --accent-hover: #4f46e5;
@@ -33,7 +33,7 @@
   --bg-tertiary: #1e293b;
   --text-primary: #f8fafc;
   --text-secondary: #cbd5e1;
-  --text-muted: #64748b;
+  --text-muted: #94a3b8;
   
   --accent-color: #8b5cf6;
   --accent-hover: #7c3aed;
@@ -62,8 +62,8 @@ body {
   font-family: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   background-color: var(--bg-primary);
   color: var(--text-primary);
-  min-height: 100vh;
-  overflow-x: hidden;
+  height: 100vh;
+  overflow: hidden;
 }
 
 .theme-transition * {
@@ -76,7 +76,8 @@ body {
 
 .app-container {
   display: flex;
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
 }
 
 .main-content {
@@ -84,6 +85,8 @@ body {
   display: flex;
   flex-direction: column;
   min-width: 0; /* Prevents flex children from stretching */
+  height: 100vh;
+  overflow-y: auto;
 }
 
 .top-nav-bar {
@@ -140,6 +143,8 @@ body {
   display: flex;
   flex-direction: column;
   z-index: 100;
+  height: 100vh;
+  overflow-y: auto;
 }
 
 .sidebar-header {
@@ -1385,3 +1390,25 @@ body {
   .top-nav-bar { padding: 0 1rem; }
   .content-body { padding: 1rem; }
 }
+
+/* ==========================================================================
+   SUBJECT AUTO-SELECTION BADGES
+   ========================================================================== */
+.subject-checkbox-badge {
+  transition: all 0.2s ease;
+}
+.subject-checkbox-badge input[type="checkbox"] {
+  cursor: pointer;
+  accent-color: var(--accent-color);
+}
+.subject-checkbox-badge:has(input:checked) {
+  background-color: var(--accent-glow) !important;
+  border-color: var(--accent-color) !important;
+  color: var(--text-primary);
+  box-shadow: 0 0 5px var(--accent-glow);
+}
+.subject-checkbox-badge:hover {
+  border-color: var(--accent-color) !important;
+  background-color: var(--bg-tertiary);
+}
+

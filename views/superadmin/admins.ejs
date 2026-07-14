@@ -1,0 +1,255 @@
+<%- include('../layouts/header') %>
+<%- include('../layouts/sidebar') %>
+
+<div class="admins-super-page">
+  <div class="card glass-card mb-6">
+    <div class="card-header border-bottom flex justify-between align-center flex-wrap gap-2">
+      <div>
+        <h3 class="card-title text-accent"><i class="fa-solid fa-users-gear"></i> Administrative Accounts Registry</h3>
+        <p class="subtext">Configure administrative credentials, reset key parameters, or delete operator profiles.</p>
+      </div>
+      <button class="btn btn-primary" onclick="openAdminModal('create')">
+        <i class="fa-solid fa-plus-circle"></i> Create New Admin
+      </button>
+    </div>
+
+    <!-- Feedback Alerts -->
+    <div class="card-body bg-light-translucent" style="padding: 0 1.5rem 1rem 1.5rem;">
+      <% if (error) { %>
+        <div class="alert alert-danger" style="margin: 1rem 0 0 0;">
+          <i class="fa-solid fa-circle-exclamation"></i>
+          <span><%= error %></span>
+        </div>
+      <% } %>
+
+      <% if (success) { %>
+        <div class="alert alert-success" style="margin: 1rem 0 0 0;">
+          <i class="fa-solid fa-circle-check"></i>
+          <span>
+            <% if (success === 'admin_created') { %>New administrator account created successfully.<% } %>
+            <% if (success === 'admin_updated') { %>Administrator details updated successfully.<% } %>
+            <% if (success === 'password_reset') { %>Administrator password reset successfully.<% } %>
+          </span>
+        </div>
+      <% } %>
+    </div>
+  </div>
+
+  <!-- Admins List Grid -->
+  <div class="card glass-card">
+    <div class="card-body">
+      <% if (admins && admins.length > 0) { %>
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Administrator Details</th>
+                <th>Employee ID</th>
+                <th>Department</th>
+                <th>Phone Number</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% admins.forEach(item => { %>
+                <tr>
+                  <td>
+                    <div class="student-profile-info">
+                      <span class="avatar-letter bg-rose"><%= item.user.name.charAt(0).toUpperCase() %></span>
+                      <div class="flex flex-col">
+                        <strong><%= item.user.name %></strong><br/>
+                        <span class="text-xs text-muted"><%= item.user.email %></span>
+                      </div>
+                    </div>
+                  </td>
+                  <td><code><%= item.profile.employeeId %></code></td>
+                  <td><%= item.profile.department %></td>
+                  <td><%= item.user.phone || 'N/A' %></td>
+                  <td>
+                    <div class="actions-group flex gap-2">
+                      <!-- Edit Details Button -->
+                      <button class="btn btn-outline btn-xs" onclick="openAdminModal('edit', '<%= item.user._id %>')">
+                        <i class="fa-solid fa-pen-to-square"></i> Edit
+                      </button>
+
+                      <!-- Reset Password Button -->
+                      <button class="btn btn-warning btn-xs" onclick="openResetModal('<%= item.user._id %>', '<%= item.user.name %>')">
+                        <i class="fa-solid fa-key"></i> Reset Pass
+                      </button>
+
+                      <!-- Delete Admin Button -->
+                      <% if (item.user._id.toString() !== user._id.toString()) { %>
+                        <button class="btn btn-danger btn-xs" onclick="deleteAdmin('<%= item.user._id %>', '<%= item.user.name %>')">
+                          <i class="fa-solid fa-trash"></i> Delete
+                        </button>
+                      <% } else { %>
+                        <span class="text-muted text-xs" style="padding: 0.35rem 0.75rem;"><i class="fa-solid fa-lock"></i> Locked</span>
+                      <% } %>
+                    </div>
+                  </td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      <% } else { %>
+        <div class="empty-state">
+          <i class="fa-solid fa-users-slash"></i>
+          <h4>No Admins Registered</h4>
+          <p>No administrator accounts were found in the database.</p>
+        </div>
+      <% } %>
+    </div>
+  </div>
+</div>
+
+<!-- Create/Edit Admin Modal Overlay -->
+<div class="modal-overlay" id="admin-modal" style="display: none;">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h3 id="modal-title">Create New Admin</h3>
+      <button class="modal-close" onclick="closeAdminModal()">&times;</button>
+    </div>
+    
+    <form id="admin-form" method="POST">
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="name">Full Name</label>
+          <input type="text" id="name" name="name" placeholder="Administrator Name" required>
+        </div>
+
+        <div class="form-group">
+          <label for="email">Email Address</label>
+          <input type="email" id="email" name="email" placeholder="admin@example.com" required autocomplete="email">
+        </div>
+
+        <div class="form-group" id="password-form-group">
+          <label for="password">Access Password</label>
+          <input type="password" id="password" name="password" placeholder="Min. 6 characters" minlength="6" autocomplete="new-password">
+        </div>
+
+        <div class="form-group">
+          <label for="employeeId">Employee ID</label>
+          <input type="text" id="employeeId" name="employeeId" placeholder="ADM-101" required>
+        </div>
+
+        <div class="form-group">
+          <label for="department">Department</label>
+          <input type="text" id="department" name="department" placeholder="Examinations" required>
+        </div>
+
+        <div class="form-group">
+          <label for="phone">Phone Number (Optional)</label>
+          <input type="text" id="phone" name="phone" placeholder="Contact Number">
+        </div>
+      </div>
+
+      <div class="modal-footer flex justify-between">
+        <button type="button" class="btn btn-outline" onclick="closeAdminModal()">Cancel</button>
+        <button type="submit" class="btn btn-primary" id="modal-submit-btn">Save Account</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Reset Password Modal Overlay -->
+<div class="modal-overlay" id="reset-modal" style="display: none;">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h3>Reset Admin Password</h3>
+      <button class="modal-close" onclick="closeResetModal()">&times;</button>
+    </div>
+    
+    <form id="reset-form" method="POST">
+      <div class="modal-body">
+        <p>Reset access credentials for administrator: <strong id="reset-admin-name">Admin</strong></p>
+        <div class="form-group mt-4">
+          <label for="newPassword">New Password:</label>
+          <input type="password" name="newPassword" id="newPassword" class="form-control" placeholder="Min. 6 characters" minlength="6" required autocomplete="new-password">
+        </div>
+      </div>
+      <div class="modal-footer flex justify-between">
+        <button type="button" class="btn btn-outline" onclick="closeResetModal()">Cancel</button>
+        <button type="submit" class="btn btn-warning">Reset Password <i class="fa-solid fa-key"></i></button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  const adminsList = <%- JSON.stringify(admins) %>;
+
+  function openAdminModal(mode, adminId = '') {
+    const modal = document.getElementById('admin-modal');
+    const form = document.getElementById('admin-form');
+    const titleHeader = document.getElementById('modal-title');
+    const submitBtn = document.getElementById('modal-submit-btn');
+    const passGroup = document.getElementById('password-form-group');
+    const passInput = document.getElementById('password');
+
+    if (mode === 'create') {
+      titleHeader.innerText = 'Create New Admin';
+      form.action = '/superadmin/admins';
+      form.reset();
+      passGroup.style.display = 'block';
+      passInput.required = true;
+      submitBtn.innerText = 'Create Admin';
+    } else if (mode === 'edit') {
+      titleHeader.innerText = 'Edit Admin Details';
+      form.action = '/superadmin/admins/' + adminId;
+      passGroup.style.display = 'none';
+      passInput.required = false;
+      submitBtn.innerText = 'Save Changes';
+
+      const adm = adminsList.find(a => a.user._id === adminId);
+      if (adm) {
+        document.getElementById('name').value = adm.user.name;
+        document.getElementById('email').value = adm.user.email;
+        document.getElementById('phone').value = adm.user.phone || '';
+        document.getElementById('employeeId').value = adm.profile.employeeId || '';
+        document.getElementById('department').value = adm.profile.department || '';
+      }
+    }
+    modal.style.display = 'flex';
+  }
+
+  function closeAdminModal() {
+    document.getElementById('admin-modal').style.display = 'none';
+  }
+
+  function openResetModal(adminId, adminName) {
+    const modal = document.getElementById('reset-modal');
+    const form = document.getElementById('reset-form');
+    const nameText = document.getElementById('reset-admin-name');
+
+    nameText.innerText = adminName;
+    form.action = '/superadmin/admins/' + adminId + '/reset-password';
+    modal.style.display = 'flex';
+  }
+
+  function closeResetModal() {
+    document.getElementById('reset-modal').style.display = 'none';
+  }
+
+  async function deleteAdmin(adminId, adminName) {
+    if (confirm('Are you sure you want to delete administrator "' + adminName + '"? This will permanently delete the operator profile.')) {
+      try {
+        const response = await fetch('/superadmin/admins/' + adminId, {
+          method: 'DELETE'
+        });
+        const data = await response.json();
+        
+        if (data.success) {
+          window.location.reload();
+        } else {
+          alert('Delete failed: ' + data.message);
+        }
+      } catch (err) {
+        console.error(err);
+        alert('An error occurred during account deletion.');
+      }
+    }
+  }
+</script>
+
+<%- include('../layouts/footer') %>

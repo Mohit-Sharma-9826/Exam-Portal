@@ -41,6 +41,20 @@ const seedData = async () => {
       department: 'Examinations'
     });
 
+    // Create Super Admin User
+    const superAdminUser = await User.create({
+      name: 'System Super Admin',
+      email: 'superadmin@exam.com',
+      password: 'superadmin123', // Will be hashed by pre-save hook
+      role: 'superAdmin'
+    });
+
+    await AdminProfile.create({
+      user: superAdminUser._id,
+      employeeId: 'SAD-001',
+      department: 'Administration'
+    });
+
     // Create Student User
     const studentUser = await User.create({
       name: 'John Doe',
@@ -52,7 +66,8 @@ const seedData = async () => {
     const studentProfile = await StudentProfile.create({
       user: studentUser._id,
       rollNumber: 'STU-2026-001',
-      batch: 'Batch B2'
+      batch: 'Batch B2',
+      assignedAdmin: adminUser._id
     });
 
     console.log('Seeding Questions...');
@@ -168,6 +183,7 @@ const seedData = async () => {
       totalMarks: 14,
       passingMarks: 6,
       questions: questionIds,
+      createdBy: adminUser._id,
       isActive: true
     });
 

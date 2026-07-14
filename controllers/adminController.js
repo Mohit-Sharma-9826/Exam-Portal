@@ -23,22 +23,28 @@ const logActivity = async (adminId, action, details, req) => {
 // @desc    Admin Dashboard Home
 exports.getDashboard = async (req, res, next) => {
   try {
-    const studentCount = await User.countDocuments({ role: 'student' });
-    const examCount = await Exam.countDocuments();
-    const questionCount = await Question.countDocuments();
-    const resultCount = await Result.countDocuments();
+    // Find students managed by this admin
+    const managedStudentProfiles = await StudentProfile.find({ assignedAdmin: req.user._id });
+    const managedStudentUserIds = managedStudentProfiles.map(p => p.user);
 
-    // Find performance breakdowns
-    const passCount = await Result.countDocuments({ status: 'pass' });
-    const failCount = await Result.countDocuments({ status: 'fail' });
+    const studentCount = managedStudentUserIds.length;
+    const examCount = await Exam.countDocuments({ createdBy: req.user._id });
+    const questionCount = await Question.countDocuments({ createdBy: req.user._id });
+    const resultCount = await Result.countDocuments({ student: { $in: managedStudentUserIds } });
+
+    // Find performance breakdowns for managed students
+    const passCount = await Result.countDocuments({ student: { $in: managedStudentUserIds }, status: 'pass' });
+    const failCount = await Result.countDocuments({ student: { $in: managedStudentUserIds }, status: 'fail' });
 
     // Subject breakdown
     const subjectBreakdown = await Question.aggregate([
+      { $match: { createdBy: req.user._id } },
       { $group: { _id: '$subject', count: { $sum: 1 } } }
     ]);
 
-    // Average score per exam
+    // Average score per exam for managed students
     const examPerformance = await Result.aggregate([
+      { $match: { student: { $in: managedStudentUserIds } } },
       {
         $group: {
           _id: '$exam',
@@ -85,20 +91,22 @@ exports.getDashboard = async (req, res, next) => {
 // @desc    Manage Student Accounts List
 exports.getStudents = async (req, res, next) => {
   try {
-    const students = await User.find({ role: 'student' }).sort({ createdAt: -1 });
+    // Find student profiles managed by this admin
+    const profiles = await StudentProfile.find({ assignedAdmin: req.user._id }).populate('assignedExams');
+    const studentUserIds = profiles.map(p => p.user);
+
+    const students = await User.find({ _id: { $in: studentUserIds }, role: 'student' }).sort({ createdAt: -1 });
     
     // Hydrate each student with profile fields
-    const studentProfiles = await Promise.all(
-      students.map(async (stu) => {
-        const profile = await StudentProfile.findOne({ user: stu._id }).populate('assignedExams');
-        return {
-          user: stu,
-          profile: profile || { rollNumber: 'N/A', batch: 'N/A', assignedExams: [] }
-        };
-      })
-    );
+    const studentProfiles = students.map((stu) => {
+      const profile = profiles.find(p => p.user.toString() === stu._id.toString());
+      return {
+        user: stu,
+        profile: profile || { rollNumber: 'N/A', batch: 'N/A', assignedExams: [] }
+      };
+    });
 
-    const exams = await Exam.find({ isActive: true });
+    const exams = await Exam.find({ createdBy: req.user._id, isActive: true });
 
     res.render('admin/students', {
       title: 'Manage Students',
@@ -114,6 +122,15 @@ exports.getStudents = async (req, res, next) => {
 // @desc    Toggle user status (Active/Deactive)
 exports.toggleStudentStatus = async (req, res, next) => {
   try {
+    // Verify student is managed by this admin
+    const profile = await StudentProfile.findOne({ user: req.params.id, assignedAdmin: req.user._id });
+    if (!profile) {
+      if (req.originalUrl.startsWith('/api/')) {
+        return res.status(403).json({ success: false, message: 'Not authorized to manage this student' });
+      }
+      return res.status(403).render('error', { title: 'Forbidden', message: 'Not authorized to manage this student', statusCode: 403, user: req.user });
+    }
+
     const user = await User.findById(req.params.id);
     if (!user) {
       return res.status(404).json({ success: false, message: 'Student not found' });
@@ -139,15 +156,64 @@ exports.toggleStudentStatus = async (req, res, next) => {
   }
 };
 
+// @desc    Assign exam to all student profiles
+exports.assignExamToAll = async (req, res, next) => {
+  const { examId } = req.body;
+  try {
+    const examObj = await Exam.findOne({ _id: examId, createdBy: req.user._id });
+    if (!examObj) {
+      return res.status(404).render('error', {
+        title: 'Exam Not Found',
+        message: 'Could not locate the requested exam or unauthorized access.',
+        statusCode: 404,
+        user: req.user
+      });
+    }
+
+    // Get all student profiles assigned to this admin
+    const studentProfiles = await StudentProfile.find({ assignedAdmin: req.user._id });
+    let newlyAssignedCount = 0;
+
+    for (const profile of studentProfiles) {
+      if (!profile.assignedExams.includes(examId)) {
+        profile.assignedExams.push(examId);
+        await profile.save();
+        newlyAssignedCount++;
+      }
+    }
+
+    await logActivity(
+      req.user._id,
+      'ASSIGN_EXAM_TO_ALL',
+      `Assigned exam "${examObj.title}" to all ${studentProfiles.length} students managed by this admin (newly assigned: ${newlyAssignedCount})`,
+      req
+    );
+
+    res.redirect('/admin/students');
+  } catch (error) {
+    next(error);
+  }
+};
+
 // @desc    Assign exam to student profile
 exports.assignExam = async (req, res, next) => {
   const { examId } = req.body;
   try {
-    const studentProfile = await StudentProfile.findOne({ user: req.params.id });
+    const examObj = await Exam.findOne({ _id: examId, createdBy: req.user._id });
+    if (!examObj) {
+      return res.status(404).render('error', {
+        title: 'Exam Not Found',
+        message: 'Could not locate the requested exam or unauthorized access.',
+        statusCode: 404,
+        user: req.user
+      });
+    }
+
+    const studentProfile = await StudentProfile.findOne({ user: req.params.id, assignedAdmin: req.user._id });
     if (!studentProfile) {
       return res.status(404).render('error', {
         title: 'Profile Not Found',
-        message: 'Could not locate student profile.',
+        message: 'Could not locate student profile or unauthorized access.',
         statusCode: 404,
         user: req.user
       });
@@ -177,7 +243,7 @@ exports.assignExam = async (req, res, next) => {
 // @desc    View administrative activity log audits
 exports.getLogs = async (req, res, next) => {
   try {
-    const logs = await ActivityLog.find()
+    const logs = await ActivityLog.find({ admin: req.user._id })
       .populate('admin', 'name email')
       .sort({ timestamp: -1 })
       .limit(100);

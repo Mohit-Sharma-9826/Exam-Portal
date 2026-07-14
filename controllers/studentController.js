@@ -323,7 +323,18 @@ exports.getExamHistory = async (req, res, next) => {
 // @desc    Exam Leaderboard View
 exports.getLeaderboard = async (req, res, next) => {
   try {
-    const exams = await Exam.find({ isActive: true });
+    // Find student's assigned admin
+    const profile = await StudentProfile.findOne({ user: req.user._id });
+    if (!profile) {
+      return res.status(404).render('error', {
+        title: 'Profile Not Found',
+        message: 'Student profile not found. Please contact administrator.',
+        statusCode: 404,
+        user: req.user
+      });
+    }
+
+    const exams = await Exam.find({ createdBy: profile.assignedAdmin, isActive: true });
     const selectedExamId = req.query.examId || (exams.length > 0 ? exams[0]._id : null);
     
     let standings = [];

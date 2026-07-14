@@ -104,16 +104,45 @@
             <input type="number" id="passingMarks" name="passingMarks" min="0" placeholder="40" required>
           </div>
         </div>
+        <!-- Subject Selection Section -->
+        <%
+          const distinctSubjects = [];
+          if (questions && questions.length > 0) {
+            questions.forEach(q => {
+              if (q.subject && !distinctSubjects.includes(q.subject)) {
+                distinctSubjects.push(q.subject);
+              }
+            });
+          }
+          distinctSubjects.sort();
+        %>
+        
+        <% if (distinctSubjects.length > 0) { %>
+          <div class="form-group full-width mt-3">
+            <label class="font-semibold block mb-2"><i class="fa-solid fa-tags text-indigo"></i> Auto-Select by Subject(s)</label>
+            <div class="subjects-selector-container" style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px;">
+              <% distinctSubjects.forEach(sub => { %>
+                <label class="subject-checkbox-badge" style="cursor: pointer; display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 20px; border: 1px solid var(--border-color); background-color: var(--bg-tertiary); font-size: 0.85rem; user-select: none; transition: all 0.2s ease;">
+                  <input type="checkbox" class="subject-select-checkbox" value="<%= sub %>" onchange="toggleSubjectQuestions(this)">
+                  <span><%= sub %></span>
+                </label>
+              <% }) %>
+            </div>
+          </div>
+        <% } %>
 
         <!-- Question Selector Section -->
         <div class="question-selection-section mt-4">
-          <label class="font-semibold block mb-2"><i class="fa-solid fa-list-check text-indigo"></i> Select Questions from Bank</label>
+          <label class="font-semibold block mb-2">
+            <i class="fa-solid fa-list-check text-indigo"></i> Select Questions from Bank
+            <span id="selected-questions-count-badge" class="badge badge-info" style="margin-left: 8px; font-size: 0.8rem; padding: 3px 8px;">0 Selected</span>
+          </label>
           
           <% if (questions && questions.length > 0) { %>
             <div class="scrollable-checklist-container">
               <% questions.forEach(q => { %>
                 <label class="checkbox-item">
-                  <input type="checkbox" name="questions" value="<%= q._id %>" class="q-checkbox">
+                  <input type="checkbox" name="questions" value="<%= q._id %>" class="q-checkbox" data-subject="<%= q.subject %>">
                   <span class="checklist-details">
                     <span class="subject-tag-micro"><%= q.subject %></span>
                     <strong class="q-text-snippet"><%= q.text %></strong>
@@ -143,6 +172,51 @@
 <script>
   const examsList = <%- JSON.stringify(exams) %>;
 
+  function toggleSubjectQuestions(checkbox) {
+    const subject = checkbox.value;
+    const isChecked = checkbox.checked;
+    const questionCheckboxes = document.querySelectorAll(`.q-checkbox[data-subject="${subject}"]`);
+    questionCheckboxes.forEach(cb => {
+      cb.checked = isChecked;
+    });
+    updateSelectedQuestionsCount();
+  }
+
+  function updateSelectedQuestionsCount() {
+    const checkedCount = document.querySelectorAll('.q-checkbox:checked').length;
+    const badge = document.getElementById('selected-questions-count-badge');
+    if (badge) {
+      badge.innerText = `${checkedCount} Selected`;
+    }
+  }
+
+  function syncSubjectBadges() {
+    const subjectCheckboxes = document.querySelectorAll('.subject-select-checkbox');
+    subjectCheckboxes.forEach(subCb => {
+      const subject = subCb.value;
+      const qCheckboxes = document.querySelectorAll(`.q-checkbox[data-subject="${subject}"]`);
+      if (qCheckboxes.length === 0) {
+        subCb.checked = false;
+        return;
+      }
+      let allChecked = true;
+      qCheckboxes.forEach(qCb => {
+        if (!qCb.checked) allChecked = false;
+      });
+      subCb.checked = allChecked;
+    });
+  }
+
+  // Hook change listeners to sync on manual checks
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.q-checkbox').forEach(cb => {
+      cb.addEventListener('change', () => {
+        syncSubjectBadges();
+        updateSelectedQuestionsCount();
+      });
+    });
+  });
+
   function openExamModal(mode, examId = '') {
     const modal = document.getElementById('exam-modal');
     const form = document.getElementById('exam-form');
@@ -151,12 +225,16 @@
 
     // Reset checkboxes
     document.querySelectorAll('.q-checkbox').forEach(cb => cb.checked = false);
+    document.querySelectorAll('.subject-select-checkbox').forEach(cb => cb.checked = false);
 
     if (mode === 'create') {
       titleHeader.innerText = 'Create New Exam';
       form.action = '/admin/exams';
       form.reset();
       submitBtn.innerText = 'Create Exam';
+      
+      // Update count badge to 0
+      updateSelectedQuestionsCount();
     } else if (mode === 'edit') {
       titleHeader.innerText = 'Edit Exam Profile';
       form.action = '/admin/exams/' + examId;
@@ -175,6 +253,12 @@
           const cb = document.querySelector(`.q-checkbox[value="${q._id || q}"]`);
           if (cb) cb.checked = true;
         });
+
+        // Sync subject checkboxes based on assigned questions
+        syncSubjectBadges();
+        
+        // Update count badge for loaded questions
+        updateSelectedQuestionsCount();
       }
     }
     modal.style.display = 'flex';

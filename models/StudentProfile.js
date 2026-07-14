@@ -18,6 +18,11 @@ const StudentProfileSchema = new mongoose.Schema({
     required: [true, 'Please provide a batch'],
     trim: true
   },
+  assignedAdmin: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: [true, 'Please specify an assigned administrator']
+  },
   assignedExams: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Exam'

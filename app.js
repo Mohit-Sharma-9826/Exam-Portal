@@ -37,19 +37,18 @@ app.use((req, res, next) => {
 const authRoutes = require('./routes/authRoutes');
 const studentRoutes = require('./routes/studentRoutes');
 const adminRoutes = require('./routes/adminRoutes');
+const superAdminRoutes = require('./routes/superAdminRoutes');
 const apiRoutes = require('./routes/apiRoutes');
 
 // Mount Routers
 app.use('/auth', authRoutes);
 app.use('/student', studentRoutes);
 app.use('/admin', adminRoutes);
+app.use('/superadmin', superAdminRoutes);
 app.use('/api', apiRoutes);
 
 // Root Redirect
 app.get('/', (req, res) => {
-  if (req.cookies && req.cookies.token) {
-    return res.redirect('/student/dashboard');
-  }
   res.redirect('/auth/login');
 });
 

@@ -2,6 +2,7 @@ const Exam = require('../models/Exam');
 const Question = require('../models/Question');
 const Result = require('../models/Result');
 const User = require('../models/User');
+const StudentProfile = require('../models/StudentProfile');
 const ActivityLog = require('../models/ActivityLog');
 const { parseQuestionsCSV } = require('../utils/csvParser');
 
@@ -25,8 +26,8 @@ const logActivity = async (adminId, action, details, req) => {
 // @desc    View Exams list
 exports.getExams = async (req, res, next) => {
   try {
-    const exams = await Exam.find().populate('questions').sort({ createdAt: -1 });
-    const questions = await Question.find().sort({ subject: 1 });
+    const exams = await Exam.find({ createdBy: req.user._id }).populate('questions').sort({ createdAt: -1 });
+    const questions = await Question.find({ createdBy: req.user._id }).sort({ subject: 1 });
     res.render('admin/exams', {
       title: 'Manage Exams',
       exams,
@@ -55,7 +56,8 @@ exports.createExam = async (req, res, next) => {
       duration: parseInt(duration, 10),
       totalMarks: parseInt(totalMarks, 10),
       passingMarks: parseInt(passingMarks, 10),
-      questions: questionsArray
+      questions: questionsArray,
+      createdBy: req.user._id
     });
 
     await logActivity(req.user._id, 'CREATE_EXAM', `Created exam "${exam.title}" with ${questionsArray.length} questions`, req);
@@ -75,9 +77,9 @@ exports.updateExam = async (req, res, next) => {
       questionsArray = Array.isArray(questions) ? questions : [questions];
     }
 
-    const exam = await Exam.findById(req.params.id);
+    const exam = await Exam.findOne({ _id: req.params.id, createdBy: req.user._id });
     if (!exam) {
-      return res.status(404).render('error', { title: 'Not Found', message: 'Exam not found', statusCode: 404, user: req.user });
+      return res.status(404).render('error', { title: 'Not Found', message: 'Exam not found or unauthorized access', statusCode: 404, user: req.user });
     }
 
     exam.title = title;
@@ -99,9 +101,9 @@ exports.updateExam = async (req, res, next) => {
 // @desc    Delete Exam
 exports.deleteExam = async (req, res, next) => {
   try {
-    const exam = await Exam.findById(req.params.id);
+    const exam = await Exam.findOne({ _id: req.params.id, createdBy: req.user._id });
     if (!exam) {
-      return res.status(404).json({ success: false, message: 'Exam not found' });
+      return res.status(404).json({ success: false, message: 'Exam not found or unauthorized access' });
     }
 
     await Exam.deleteOne({ _id: req.params.id });
@@ -120,7 +122,7 @@ exports.getQuestions = async (req, res, next) => {
   const { search, subject } = req.query;
 
   try {
-    const query = {};
+    const query = { createdBy: req.user._id };
     if (search) {
       query.text = { $regex: search, $options: 'i' };
     }
@@ -131,7 +133,7 @@ exports.getQuestions = async (req, res, next) => {
     const questions = await Question.find(query).sort({ subject: 1 });
     
     // Find unique subjects for filter select element
-    const subjects = await Question.distinct('subject');
+    const subjects = await Question.distinct('subject', { createdBy: req.user._id });
 
     res.render('admin/questions', {
       title: 'Question Bank',
@@ -172,9 +174,9 @@ exports.updateQuestion = async (req, res, next) => {
   const { text, optionA, optionB, optionC, optionD, correctAnswer, marks, negativeMarks, subject } = req.body;
 
   try {
-    const question = await Question.findById(req.params.id);
+    const question = await Question.findOne({ _id: req.params.id, createdBy: req.user._id });
     if (!question) {
-      return res.status(404).render('error', { title: 'Not Found', message: 'Question not found', statusCode: 404, user: req.user });
+      return res.status(404).render('error', { title: 'Not Found', message: 'Question not found or unauthorized access', statusCode: 404, user: req.user });
     }
 
     question.text = text;
@@ -196,9 +198,9 @@ exports.updateQuestion = async (req, res, next) => {
 // @desc    Delete Question
 exports.deleteQuestion = async (req, res, next) => {
   try {
-    const question = await Question.findById(req.params.id);
+    const question = await Question.findOne({ _id: req.params.id, createdBy: req.user._id });
     if (!question) {
-      return res.status(404).json({ success: false, message: 'Question not found' });
+      return res.status(404).json({ success: false, message: 'Question not found or unauthorized access' });
     }
 
     await Question.deleteOne({ _id: req.params.id });
@@ -246,11 +248,25 @@ exports.getResults = async (req, res, next) => {
   const { examId } = req.query;
 
   try {
-    const exams = await Exam.find().select('title');
+    // Only get exams created by this admin
+    const exams = await Exam.find({ createdBy: req.user._id }).select('title');
+    const examIds = exams.map(e => e._id);
     
-    const query = {};
+    // Find students managed by this admin
+    const managedStudentProfiles = await StudentProfile.find({ assignedAdmin: req.user._id });
+    const managedStudentUserIds = managedStudentProfiles.map(p => p.user);
+
+    const query = {
+      student: { $in: managedStudentUserIds },
+      exam: { $in: examIds }
+    };
+
     if (examId) {
-      query.exam = examId;
+      if (examIds.some(id => id.toString() === examId.toString())) {
+        query.exam = examId;
+      } else {
+        query.exam = '000000000000000000000000'; // Target dummy non-existing ID
+      }
     }
 
     const results = await Result.find(query)
@@ -275,14 +291,29 @@ exports.exportResultsCSV = async (req, res, next) => {
   const { examId } = req.query;
 
   try {
-    const query = {};
+    // Only get exams created by this admin
+    const exams = await Exam.find({ createdBy: req.user._id }).select('title');
+    const examIds = exams.map(e => e._id);
+
+    // Find students managed by this admin
+    const managedStudentProfiles = await StudentProfile.find({ assignedAdmin: req.user._id });
+    const managedStudentUserIds = managedStudentProfiles.map(p => p.user);
+
+    const query = {
+      student: { $in: managedStudentUserIds },
+      exam: { $in: examIds }
+    };
     let filenameSuffix = 'all';
 
     if (examId) {
-      query.exam = examId;
-      const examObj = await Exam.findById(examId);
-      if (examObj) {
-        filenameSuffix = examObj.title.toLowerCase().replace(/[^a-z0-9]/g, '-');
+      if (examIds.some(id => id.toString() === examId.toString())) {
+        query.exam = examId;
+        const examObj = await Exam.findById(examId);
+        if (examObj) {
+          filenameSuffix = examObj.title.toLowerCase().replace(/[^a-z0-9]/g, '-');
+        }
+      } else {
+        query.exam = '000000000000000000000000';
       }
     }
 

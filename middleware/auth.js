@@ -46,14 +46,26 @@ exports.protect = async (req, res, next) => {
   }
 };
 
-// Admin only middleware
+// Admin only middleware (allows both admin and superAdmin)
 exports.authorizeAdmin = (req, res, next) => {
-  if (req.user && req.user.role === 'admin') {
+  if (req.user && (req.user.role === 'admin' || req.user.role === 'superAdmin')) {
     return next();
   }
   
   if (req.originalUrl.startsWith('/api/')) {
     return res.status(403).json({ success: false, message: 'Forbidden: Admin access only' });
+  }
+  return res.redirect('/auth/admin-login?error=unauthorized');
+};
+
+// Super Admin only middleware
+exports.authorizeSuperAdmin = (req, res, next) => {
+  if (req.user && req.user.role === 'superAdmin') {
+    return next();
+  }
+
+  if (req.originalUrl.startsWith('/api/')) {
+    return res.status(403).json({ success: false, message: 'Forbidden: Super Admin access only' });
   }
   return res.redirect('/auth/admin-login?error=unauthorized');
 };
