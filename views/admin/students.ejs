@@ -47,7 +47,7 @@
                     <% if (item.profile.assignedExams && item.profile.assignedExams.length > 0) { %>
                       <div class="assigned-tags-container">
                         <% item.profile.assignedExams.forEach(ex => { %>
-                          <span class="tag tag-indigo" title="<%= ex.title %>"><%= ex.title.substring(0, 15) %><%= ex.title.length > 15 ? '...' : '' %></span>
+                          <span class="tag tag-indigo" title="<%= ex.title %>"><%= ex.title.substring(0, 15) %><%= ex.title.length > 15 ? '...' : '' %></span><br/>
                         <% }) %>
                       </div>
                     <% } else { %>

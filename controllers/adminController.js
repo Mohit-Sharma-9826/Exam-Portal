@@ -4,6 +4,7 @@ const Exam = require('../models/Exam');
 const Question = require('../models/Question');
 const Result = require('../models/Result');
 const ActivityLog = require('../models/ActivityLog');
+const StudentResponse = require('../models/StudentResponse');
 
 // Helper to log admin actions
 const logActivity = async (adminId, action, details, req) => {
@@ -176,6 +177,10 @@ exports.assignExamToAll = async (req, res, next) => {
 
     for (const profile of studentProfiles) {
       if (!profile.assignedExams.includes(examId)) {
+        // Delete previous results and response logs of this exam for this student
+        await Result.deleteMany({ student: profile.user, exam: examId });
+        await StudentResponse.deleteMany({ student: profile.user, exam: examId });
+
         profile.assignedExams.push(examId);
         await profile.save();
         newlyAssignedCount++;
@@ -219,20 +224,30 @@ exports.assignExam = async (req, res, next) => {
       });
     }
 
-    if (!studentProfile.assignedExams.includes(examId)) {
-      studentProfile.assignedExams.push(examId);
-      await studentProfile.save();
-
-      const userObj = await User.findById(req.params.id);
-      const examObj = await Exam.findById(examId);
-      
-      await logActivity(
-        req.user._id,
-        'ASSIGN_EXAM',
-        `Assigned exam "${examObj ? examObj.title : examId}" to student ${userObj ? userObj.name : req.params.id}`,
-        req
-      );
+    if (studentProfile.assignedExams.includes(examId)) {
+      return res.status(400).render('error', {
+        title: 'Assignment Blocked',
+        message: 'This exam is already assigned to the student and has not been submitted yet.',
+        statusCode: 400,
+        user: req.user
+      });
     }
+
+    // Delete previous results and response logs of this exam for this student
+    await Result.deleteMany({ student: req.params.id, exam: examId });
+    await StudentResponse.deleteMany({ student: req.params.id, exam: examId });
+
+    studentProfile.assignedExams.push(examId);
+    await studentProfile.save();
+
+    const userObj = await User.findById(req.params.id);
+    
+    await logActivity(
+      req.user._id,
+      'ASSIGN_EXAM',
+      `Assigned exam "${examObj ? examObj.title : examId}" to student ${userObj ? userObj.name : req.params.id}`,
+      req
+    );
 
     res.redirect('/admin/students');
   } catch (error) {

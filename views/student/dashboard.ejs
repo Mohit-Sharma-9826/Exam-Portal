@@ -34,8 +34,16 @@
     </div>
   <% } %>
 
+  <% if (req_query && req_query.error === 'not_assigned') { %>
+    <div class="alert alert-danger" style="margin-bottom: 1.5rem;">
+      <i class="fa-solid fa-circle-exclamation"></i>
+      <span>This exam is not currently assigned to you or has already been submitted.</span>
+    </div>
+  <% } %>
+
   <!-- Assigned Exams Section -->
   <div class="dashboard-section">
+    
     <h3 class="section-title"><i class="fa-solid fa-clipboard-list text-accent"></i> Available & Assigned Exams</h3>
     
     <% if (profile.assignedExams && profile.assignedExams.length > 0) { %>
@@ -87,6 +95,7 @@
 
   <!-- Recent Attempts -->
   <div class="dashboard-section mt-6">
+    <br>
     <div class="section-header">
       <h3 class="section-title"><i class="fa-solid fa-history text-accent"></i> Recent Test Attempts</h3>
       <% if (results.length > 5) { %>

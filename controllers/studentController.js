@@ -5,6 +5,15 @@ const Question = require('../models/Question');
 const Result = require('../models/Result');
 const StudentResponse = require('../models/StudentResponse');
 
+// Fisher-Yates array shuffle helper
+const shuffleArray = (array) => {
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+  return array;
+};
+
 // @desc    Student Dashboard
 exports.getDashboard = async (req, res, next) => {
   try {
@@ -63,10 +72,10 @@ exports.getInstructions = async (req, res, next) => {
       });
     }
 
-    // Verify if already taken
-    const alreadyTaken = await Result.findOne({ student: req.user._id, exam: exam._id });
-    if (alreadyTaken) {
-      return res.redirect('/student/dashboard?error=already_submitted');
+    // Verify if currently assigned
+    const studentProfile = await StudentProfile.findOne({ user: req.user._id });
+    if (!studentProfile || !studentProfile.assignedExams.includes(exam._id)) {
+      return res.redirect('/student/dashboard?error=not_assigned');
     }
 
     res.render('student/instructions', {
@@ -87,21 +96,30 @@ exports.getExamScreen = async (req, res, next) => {
       return res.redirect('/student/dashboard?error=exam_unavailable');
     }
 
-    // Check if exam is already submitted (Result exists)
-    const resultExists = await Result.findOne({ student: req.user._id, exam: exam._id });
-    if (resultExists) {
-      return res.redirect('/student/dashboard?error=already_submitted');
+    // Check if exam is currently assigned to the student
+    const studentProfile = await StudentProfile.findOne({ user: req.user._id });
+    if (!studentProfile || !studentProfile.assignedExams.includes(exam._id)) {
+      return res.redirect('/student/dashboard?error=not_assigned');
     }
 
     // Find or create StudentResponse
     let responseSession = await StudentResponse.findOne({ student: req.user._id, exam: exam._id });
 
+    // If an old submitted session exists, clear it for the new attempt
+    if (responseSession && responseSession.isSubmitted) {
+      await StudentResponse.deleteOne({ _id: responseSession._id });
+      responseSession = null;
+    }
+
     if (!responseSession) {
       const startTime = new Date();
       const endTime = new Date(startTime.getTime() + exam.duration * 60 * 1000);
 
-      // Initialize responses structure
-      const responses = exam.questions.map(q => ({
+      // Shuffle copy of questions array to randomize question order for this student
+      const shuffledQuestions = shuffleArray([...exam.questions]);
+
+      // Initialize responses structure in randomized order
+      const responses = shuffledQuestions.map(q => ({
         questionId: q._id,
         selectedOption: '',
         markedForReview: false,
@@ -116,11 +134,7 @@ exports.getExamScreen = async (req, res, next) => {
         responses
       });
     } else {
-      // Check if session is already marked submitted or expired
-      if (responseSession.isSubmitted) {
-        return res.redirect('/student/dashboard?error=already_submitted');
-      }
-      
+      // Check if session is expired
       const now = new Date();
       if (now >= responseSession.endTime) {
         // Auto submit if expired and redirect to result
@@ -132,16 +146,19 @@ exports.getExamScreen = async (req, res, next) => {
     const now = new Date();
     const remainingSeconds = Math.max(0, Math.floor((responseSession.endTime.getTime() - now.getTime()) / 1000));
 
-    // Render exam template, omitting correct answers for security
-    const sanitizedQuestions = exam.questions.map((q, idx) => ({
-      _id: q._id,
-      text: q.text,
-      options: q.options,
-      marks: q.marks,
-      negativeMarks: q.negativeMarks,
-      subject: q.subject,
-      index: idx + 1
-    }));
+    // Render exam template following the randomized order saved in the response session
+    const sanitizedQuestions = responseSession.responses.map((resp, idx) => {
+      const q = exam.questions.find(quest => quest._id.toString() === resp.questionId.toString());
+      return {
+        _id: q._id,
+        text: q.text,
+        options: q.options,
+        marks: q.marks,
+        negativeMarks: q.negativeMarks,
+        subject: q.subject,
+        index: idx + 1
+      };
+    });
 
     res.render('student/exam', {
       title: exam.title,
@@ -249,6 +266,12 @@ exports.submitExamLogic = async (studentId, examId, res, next) => {
     session.isSubmitted = true;
     session.submittedAt = new Date();
     await session.save();
+
+    // Remove from student profile's assignedExams list
+    await StudentProfile.findOneAndUpdate(
+      { user: studentId },
+      { $pull: { assignedExams: examId } }
+    );
 
     // Create Result
     const result = await Result.create({
