@@ -9,6 +9,7 @@ const Question = require('../models/Question');
 const Result = require('../models/Result');
 const StudentResponse = require('../models/StudentResponse');
 const ActivityLog = require('../models/ActivityLog');
+const Otp = require('../models/Otp');
 
 dotenv.config();
 
@@ -25,6 +26,7 @@ const seedData = async () => {
     await Result.deleteMany();
     await StudentResponse.deleteMany();
     await ActivityLog.deleteMany();
+    await Otp.deleteMany();
 
     console.log('Seeding Users...');
     // Create Admin User

@@ -1,0 +1,174 @@
+<%- include('../layouts/header') %>
+
+<div class="auth-page-container">
+  <div class="auth-card">
+    <div class="auth-header">
+      <div class="auth-logo">
+        <i class="fa-solid fa-graduation-cap"></i>
+        <span>ExamPortal</span>
+      </div>
+      <h3>Email Verification</h3>
+      <p>Please enter the 6-digit OTP code sent to <strong><%= email %></strong></p>
+    </div>
+
+    <% if (error) { %>
+      <div class="alert alert-danger" id="errorMessage" style="margin-bottom: 1.5rem;">
+        <i class="fa-solid fa-circle-exclamation"></i>
+        <span><%= error %></span>
+      </div>
+    <% } %>
+
+    <% if (success) { %>
+      <div class="alert alert-success" id="successMessage" style="margin-bottom: 1.5rem;">
+        <i class="fa-solid fa-circle-check"></i>
+        <span><%= success %></span>
+      </div>
+    <% } %>
+
+    <div class="alert alert-danger" id="clientError" style="margin-bottom: 1.5rem; display: none;">
+      <i class="fa-solid fa-circle-exclamation"></i>
+      <span id="clientErrorText"></span>
+    </div>
+
+    <div class="alert alert-success" id="clientSuccess" style="margin-bottom: 1.5rem; display: none;">
+      <i class="fa-solid fa-circle-check"></i>
+      <span id="clientSuccessText"></span>
+    </div>
+
+    <form action="/auth/verify-otp" method="POST" class="auth-form">
+      <input type="hidden" name="email" value="<%= email %>">
+      
+      <div class="form-group">
+        <label for="otp"><i class="fa-solid fa-key"></i> OTP Code</label>
+        <input type="text" id="otp" name="otp" placeholder="123456" required autocomplete="one-time-code" minlength="6" maxlength="6" pattern="[0-9]{6}" style="text-align: center; font-size: 24px; letter-spacing: 0.25em; font-family: monospace;">
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-block">Verify & Register <i class="fa-solid fa-circle-check"></i></button>
+    </form>
+
+    <div class="auth-footer" style="margin-top: 1.5rem; display: flex; flex-direction: column; gap: 0.75rem; align-items: center;">
+      <p style="margin: 0; font-size: 0.9rem;">
+        OTP expires in: <span id="timer" class="font-bold" style="color: var(--color-accent, #4f46e5); font-family: monospace;">02:00</span>
+      </p>
+      
+      <form id="resendForm" action="/auth/resend-otp" method="POST" style="width: 100%; display: flex; justify-content: center;">
+        <input type="hidden" name="email" value="<%= email %>">
+        <button type="submit" id="resendBtn" class="btn btn-outline" style="font-size: 0.85rem; padding: 0.4rem 1rem; min-width: 150px;" disabled>
+          Resend OTP (<span id="cooldown">30</span>s)
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    // 2-minute OTP Expiration Timer
+    let expirationSeconds = 120;
+    const timerSpan = document.getElementById('timer');
+    let expirationInterval;
+    
+    const updateExpirationTimer = () => {
+      const minutes = Math.floor(expirationSeconds / 60);
+      const seconds = expirationSeconds % 60;
+      timerSpan.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+      
+      if (expirationSeconds <= 0) {
+        clearInterval(expirationInterval);
+        timerSpan.textContent = 'Expired';
+        timerSpan.style.color = '#ef4444';
+      }
+      expirationSeconds--;
+    };
+    
+    expirationInterval = setInterval(updateExpirationTimer, 1000);
+    updateExpirationTimer();
+
+    // 30-second Resend Cooldown Timer
+    let cooldownSeconds = 30;
+    const resendBtn = document.getElementById('resendBtn');
+    const cooldownSpan = document.getElementById('cooldown');
+    let cooldownInterval;
+    
+    const updateCooldownTimer = () => {
+      if (cooldownSeconds <= 0) {
+        clearInterval(cooldownInterval);
+        resendBtn.disabled = false;
+        resendBtn.textContent = 'Resend OTP';
+      } else {
+        resendBtn.disabled = true;
+        cooldownSpan.textContent = cooldownSeconds;
+        cooldownSeconds--;
+      }
+    };
+    
+    cooldownInterval = setInterval(updateCooldownTimer, 1000);
+    updateCooldownTimer();
+
+    // Handle AJAX Resend to avoid page reloads
+    const resendForm = document.getElementById('resendForm');
+    const clientError = document.getElementById('clientError');
+    const clientSuccess = document.getElementById('clientSuccess');
+    const clientErrorText = document.getElementById('clientErrorText');
+    const clientSuccessText = document.getElementById('clientSuccessText');
+    const serverError = document.getElementById('errorMessage');
+    const serverSuccess = document.getElementById('successMessage');
+
+    resendForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      if (resendBtn.disabled) return;
+      
+      // Reset alerts
+      if (serverError) serverError.style.display = 'none';
+      if (serverSuccess) serverSuccess.style.display = 'none';
+      clientError.style.display = 'none';
+      clientSuccess.style.display = 'none';
+      
+      resendBtn.disabled = true;
+      resendBtn.textContent = 'Sending...';
+
+      try {
+        const response = await fetch('/auth/resend-otp', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ email: '<%= email %>' })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          clientSuccessText.textContent = data.message || 'OTP has been resent to your email!';
+          clientSuccess.style.display = 'flex';
+          
+          // Reset cooldown
+          cooldownSeconds = 30;
+          clearInterval(cooldownInterval);
+          cooldownInterval = setInterval(updateCooldownTimer, 1000);
+          updateCooldownTimer();
+          
+          // Reset expiration
+          expirationSeconds = 120;
+          timerSpan.style.color = 'var(--color-accent, #4f46e5)';
+          clearInterval(expirationInterval);
+          expirationInterval = setInterval(updateExpirationTimer, 1000);
+          updateExpirationTimer();
+        } else {
+          clientErrorText.textContent = data.message || 'Failed to resend OTP.';
+          clientError.style.display = 'flex';
+          resendBtn.disabled = false;
+          resendBtn.textContent = 'Resend OTP';
+        }
+      } catch (err) {
+        clientErrorText.textContent = 'Network error. Please try again.';
+        clientError.style.display = 'flex';
+        resendBtn.disabled = false;
+        resendBtn.textContent = 'Resend OTP';
+      }
+    });
+  });
+</script>
+
+<%- include('../layouts/footer') %>

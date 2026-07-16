@@ -2,6 +2,8 @@ const User = require('../models/User');
 const StudentProfile = require('../models/StudentProfile');
 const AdminProfile = require('../models/AdminProfile');
 const jwt = require('jsonwebtoken');
+const Otp = require('../models/Otp');
+const { sendOtpEmail } = require('../utils/mailer');
 
 // Helper to generate JWT
 const generateToken = (id) => {
@@ -129,27 +131,33 @@ exports.registerStudent = async (req, res, next) => {
       return res.render('auth/student-register', { error: 'Invalid administrator selected', admins });
     }
 
-    // Create base user
-    const user = await User.create({
-      name,
-      email,
-      password,
-      role: 'student',
-      isApproved: false // Requires admin approval
-    });
+    // Generate 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(Date.now() + 2 * 60 * 1000); // 2 minutes
 
-    // Create student profile
-    await StudentProfile.create({
-      user: user._id,
-      rollNumber,
-      batch,
-      assignedAdmin: adminId
-    });
+    // Upsert the OTP document
+    await Otp.findOneAndUpdate(
+      { email: email.toLowerCase().trim() },
+      {
+        otp,
+        registrationData: { name, email, password, rollNumber, batch, adminId },
+        expiresAt,
+        lastSentAt: new Date()
+      },
+      { upsert: true, new: true }
+    );
+
+    // Send OTP Email
+    await sendOtpEmail(email, otp, name);
 
     if (req_is_api(req)) {
-      return res.status(201).json({ success: true, message: 'Registration successful. Waiting for admin approval.' });
+      return res.status(200).json({
+        success: true,
+        message: 'OTP sent successfully to your email. Please verify.',
+        redirectUrl: `/auth/verify-otp?email=${encodeURIComponent(email)}`
+      });
     }
-    res.redirect('/auth/login?success=pending_approval');
+    res.redirect(`/auth/verify-otp?email=${encodeURIComponent(email)}`);
   } catch (error) {
     next(error);
   }
@@ -236,4 +244,127 @@ exports.logout = (req, res) => {
     return res.status(200).json({ success: true, message: 'Logged out successfully' });
   }
   res.redirect('/auth/login?success=logged_out');
+};
+
+// @desc    Render OTP Verification Screen
+exports.getVerifyOtp = async (req, res, next) => {
+  const { email } = req.query;
+  if (!email) {
+    return res.redirect('/auth/register?error=Email%20is%20required');
+  }
+  res.render('auth/verify-otp', {
+    email,
+    error: req.query.error || null,
+    success: req.query.success === 'otp_resent' ? 'A new OTP has been sent to your email.' : null
+  });
+};
+
+// @desc    Verify OTP and Complete Registration
+exports.verifyOtp = async (req, res, next) => {
+  const { email, otp } = req.body;
+
+  try {
+    if (!email || !otp) {
+      if (req_is_api(req)) return res.status(400).json({ success: false, message: 'Email and OTP are required' });
+      return res.render('auth/verify-otp', { email, error: 'Email and OTP are required', success: null });
+    }
+
+    const otpDoc = await Otp.findOne({ email: email.toLowerCase().trim() });
+
+    if (!otpDoc) {
+      if (req_is_api(req)) return res.status(400).json({ success: false, message: 'Invalid or expired OTP session. Please register again.' });
+      return res.render('auth/verify-otp', { email, error: 'Invalid or expired OTP session. Please register again.', success: null });
+    }
+
+    // Verify OTP code
+    if (otpDoc.otp !== otp) {
+      if (req_is_api(req)) return res.status(400).json({ success: false, message: 'Invalid OTP code' });
+      return res.render('auth/verify-otp', { email, error: 'Invalid OTP code', success: null });
+    }
+
+    // Check if expired
+    if (new Date() > otpDoc.expiresAt) {
+      if (req_is_api(req)) return res.status(400).json({ success: false, message: 'OTP has expired. Please request a new one.' });
+      return res.render('auth/verify-otp', { email, error: 'OTP has expired. Please request a new one.', success: null });
+    }
+
+    // OTP is valid! Proceed with registering user
+    const { name, password, rollNumber, batch, adminId } = otpDoc.registrationData;
+
+    // Double check user doesn't already exist (just in case they registered while verifying)
+    let userExists = await User.findOne({ email: email.toLowerCase().trim() });
+    if (userExists) {
+      await Otp.deleteOne({ _id: otpDoc._id }); // Delete OTP session
+      if (req_is_api(req)) return res.status(400).json({ success: false, message: 'Email already registered' });
+      return res.redirect('/auth/register?error=Email%20already%20registered');
+    }
+
+    // Create student user with isApproved: false
+    const user = await User.create({
+      name,
+      email: email.toLowerCase().trim(),
+      password,
+      role: 'student',
+      isApproved: false // Requires admin approval
+    });
+
+    // Create student profile
+    await StudentProfile.create({
+      user: user._id,
+      rollNumber,
+      batch,
+      assignedAdmin: adminId
+    });
+
+    // Delete single-use OTP document
+    await Otp.deleteOne({ _id: otpDoc._id });
+
+    if (req_is_api(req)) {
+      return res.status(201).json({ success: true, message: 'Registration successful. Waiting for admin approval.' });
+    }
+    res.redirect('/auth/login?success=pending_approval');
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Resend OTP with Cooldown
+exports.resendOtp = async (req, res, next) => {
+  const { email } = req.body;
+
+  try {
+    if (!email) {
+      return res.status(400).json({ success: false, message: 'Email is required' });
+    }
+
+    const otpDoc = await Otp.findOne({ email: email.toLowerCase().trim() });
+
+    if (!otpDoc) {
+      return res.status(400).json({ success: false, message: 'Registration session expired. Please register again.' });
+    }
+
+    // Enforce 30-second cooldown
+    const timePassed = (new Date() - otpDoc.lastSentAt) / 1000;
+    if (timePassed < 30) {
+      const waitTime = Math.ceil(30 - timePassed);
+      return res.status(400).json({ success: false, message: `Please wait ${waitTime} seconds before requesting a new OTP.` });
+    }
+
+    // Generate new OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(Date.now() + 2 * 60 * 1000); // 2 minutes
+
+    // Update document
+    otpDoc.otp = otp;
+    otpDoc.expiresAt = expiresAt;
+    otpDoc.lastSentAt = new Date();
+    await otpDoc.save();
+
+    // Send email
+    await sendOtpEmail(email, otp, otpDoc.registrationData.name);
+
+    return res.status(200).json({ success: true, message: 'A new OTP has been sent to your email.' });
+  } catch (error) {
+    next(error);
+  }
 };
