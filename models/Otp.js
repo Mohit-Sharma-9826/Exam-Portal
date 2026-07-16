@@ -12,14 +12,6 @@ const OtpSchema = new mongoose.Schema({
     type: String,
     required: true
   },
-  registrationData: {
-    name: { type: String, required: true },
-    email: { type: String, required: true, trim: true, lowercase: true },
-    password: { type: String, required: true },
-    rollNumber: { type: String, required: true },
-    batch: { type: String, required: true },
-    adminId: { type: String, required: true }
-  },
   expiresAt: {
     type: Date,
     required: true
@@ -31,7 +23,7 @@ const OtpSchema = new mongoose.Schema({
   }
 }, { timestamps: true });
 
-// Auto-delete the document after 5 minutes (300 seconds) from creation
-OtpSchema.index({ createdAt: 1 }, { expireAfterSeconds: 300 });
+// Auto-delete the document exactly when expiresAt time is reached
+OtpSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
 module.exports = mongoose.model('Otp', OtpSchema);

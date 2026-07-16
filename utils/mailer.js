@@ -4,6 +4,7 @@ const sendOtpEmail = async (email, otp, name) => {
   // Always log to console for easy local debugging/testing
   console.log(`\n==============================================`);
   console.log(`[OTP Verification] Code generated for ${name} (${email}):`);
+  // console.log(`OTP Code: ${otp}`);
   console.log(`==============================================\n`);
 
   // Check if SMTP credentials are set

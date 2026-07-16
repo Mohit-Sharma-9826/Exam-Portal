@@ -135,12 +135,25 @@ exports.registerStudent = async (req, res, next) => {
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const expiresAt = new Date(Date.now() + 2 * 60 * 1000); // 2 minutes
 
-    // Upsert the OTP document
+    // Create registration token containing registration details, expires in 5 minutes
+    const regToken = jwt.sign(
+      { name, email, password, rollNumber, batch, adminId },
+      process.env.JWT_SECRET || 'super_secret_exam_portal_jwt_secret_key_2026',
+      { expiresIn: '5m' }
+    );
+
+    // Set registration data cookie
+    res.cookie('regToken', regToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: 5 * 60 * 1000 // 5 minutes
+    });
+
+    // Upsert the OTP document (no registration details stored in DB!)
     await Otp.findOneAndUpdate(
       { email: email.toLowerCase().trim() },
       {
         otp,
-        registrationData: { name, email, password, rollNumber, batch, adminId },
         expiresAt,
         lastSentAt: new Date()
       },
@@ -154,7 +167,8 @@ exports.registerStudent = async (req, res, next) => {
       return res.status(200).json({
         success: true,
         message: 'OTP sent successfully to your email. Please verify.',
-        redirectUrl: `/auth/verify-otp?email=${encodeURIComponent(email)}`
+        redirectUrl: `/auth/verify-otp?email=${encodeURIComponent(email)}`,
+        regToken
       });
     }
     res.redirect(`/auth/verify-otp?email=${encodeURIComponent(email)}`);
@@ -269,7 +283,13 @@ exports.verifyOtp = async (req, res, next) => {
       return res.render('auth/verify-otp', { email, error: 'Email and OTP are required', success: null });
     }
 
-    const otpDoc = await Otp.findOne({ email: email.toLowerCase().trim() });
+    let otpDoc = await Otp.findOne({ email: email.toLowerCase().trim() });
+
+    // Active Expiration check: if it is expired in database, delete it immediately and treat as invalid
+    if (otpDoc && new Date() > otpDoc.expiresAt) {
+      await Otp.deleteOne({ _id: otpDoc._id });
+      otpDoc = null;
+    }
 
     if (!otpDoc) {
       if (req_is_api(req)) return res.status(400).json({ success: false, message: 'Invalid or expired OTP session. Please register again.' });
@@ -282,19 +302,28 @@ exports.verifyOtp = async (req, res, next) => {
       return res.render('auth/verify-otp', { email, error: 'Invalid OTP code', success: null });
     }
 
-    // Check if expired
-    if (new Date() > otpDoc.expiresAt) {
-      if (req_is_api(req)) return res.status(400).json({ success: false, message: 'OTP has expired. Please request a new one.' });
-      return res.render('auth/verify-otp', { email, error: 'OTP has expired. Please request a new one.', success: null });
+    // Read and verify registration token (regToken) from cookies or request body
+    const token = req.cookies.regToken || req.body.regToken;
+    if (!token) {
+      if (req_is_api(req)) return res.status(400).json({ success: false, message: 'Registration session expired. Please register again.' });
+      return res.render('auth/verify-otp', { email, error: 'Registration session expired. Please register again.', success: null });
     }
 
-    // OTP is valid! Proceed with registering user
-    const { name, password, rollNumber, batch, adminId } = otpDoc.registrationData;
+    let decoded;
+    try {
+      decoded = jwt.verify(token, process.env.JWT_SECRET || 'super_secret_exam_portal_jwt_secret_key_2026');
+    } catch (err) {
+      if (req_is_api(req)) return res.status(400).json({ success: false, message: 'Registration session expired. Please register again.' });
+      return res.render('auth/verify-otp', { email, error: 'Registration session expired. Please register again.', success: null });
+    }
+
+    const { name, password, rollNumber, batch, adminId } = decoded;
 
     // Double check user doesn't already exist (just in case they registered while verifying)
     let userExists = await User.findOne({ email: email.toLowerCase().trim() });
     if (userExists) {
       await Otp.deleteOne({ _id: otpDoc._id }); // Delete OTP session
+      res.clearCookie('regToken');
       if (req_is_api(req)) return res.status(400).json({ success: false, message: 'Email already registered' });
       return res.redirect('/auth/register?error=Email%20already%20registered');
     }
@@ -319,6 +348,9 @@ exports.verifyOtp = async (req, res, next) => {
     // Delete single-use OTP document
     await Otp.deleteOne({ _id: otpDoc._id });
 
+    // Clear registration data cookie
+    res.clearCookie('regToken');
+
     if (req_is_api(req)) {
       return res.status(201).json({ success: true, message: 'Registration successful. Waiting for admin approval.' });
     }
@@ -337,31 +369,54 @@ exports.resendOtp = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Email is required' });
     }
 
-    const otpDoc = await Otp.findOne({ email: email.toLowerCase().trim() });
-
-    if (!otpDoc) {
+    // Parse regToken to verify registration session exists and get the student's name
+    const token = req.cookies.regToken || req.body.regToken;
+    if (!token) {
       return res.status(400).json({ success: false, message: 'Registration session expired. Please register again.' });
     }
 
-    // Enforce 30-second cooldown
-    const timePassed = (new Date() - otpDoc.lastSentAt) / 1000;
-    if (timePassed < 30) {
-      const waitTime = Math.ceil(30 - timePassed);
-      return res.status(400).json({ success: false, message: `Please wait ${waitTime} seconds before requesting a new OTP.` });
+    let decoded;
+    try {
+      decoded = jwt.verify(token, process.env.JWT_SECRET || 'super_secret_exam_portal_jwt_secret_key_2026');
+    } catch (err) {
+      return res.status(400).json({ success: false, message: 'Registration session expired. Please register again.' });
+    }
+
+    const { name } = decoded;
+    let otpDoc = await Otp.findOne({ email: email.toLowerCase().trim() });
+
+    // Active Expiration check: if it is expired in database, delete it immediately
+    if (otpDoc && new Date() > otpDoc.expiresAt) {
+      await Otp.deleteOne({ _id: otpDoc._id });
+      otpDoc = null;
+    }
+
+    if (otpDoc) {
+      // Enforce 30-second cooldown
+      const timePassed = (new Date() - otpDoc.lastSentAt) / 1000;
+      if (timePassed < 30) {
+        const waitTime = Math.ceil(30 - timePassed);
+        return res.status(400).json({ success: false, message: `Please wait ${waitTime} seconds before requesting a new OTP.` });
+      }
     }
 
     // Generate new OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const expiresAt = new Date(Date.now() + 2 * 60 * 1000); // 2 minutes
 
-    // Update document
-    otpDoc.otp = otp;
-    otpDoc.expiresAt = expiresAt;
-    otpDoc.lastSentAt = new Date();
-    await otpDoc.save();
+    // Upsert the OTP document (no registration details stored in DB!)
+    await Otp.findOneAndUpdate(
+      { email: email.toLowerCase().trim() },
+      {
+        otp,
+        expiresAt,
+        lastSentAt: new Date()
+      },
+      { upsert: true, new: true }
+    );
 
     // Send email
-    await sendOtpEmail(email, otp, otpDoc.registrationData.name);
+    await sendOtpEmail(email, otp, name);
 
     return res.status(200).json({ success: true, message: 'A new OTP has been sent to your email.' });
   } catch (error) {
