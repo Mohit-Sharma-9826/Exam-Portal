@@ -94,6 +94,13 @@
                             <%= item.user.isActive ? 'Deactivate' : 'Activate' %>
                           </button>
                         </form>
+
+                        <!-- Delete Student Form -->
+                        <form action="/admin/students/<%= item.user._id %>/delete" method="POST" style="display: inline;" onsubmit="return confirm('Are you sure you want to completely delete this student? All their results and attempt history will be permanently deleted.');">
+                          <button type="submit" class="btn btn-xs btn-danger">
+                            <i class="fa-solid fa-trash-can"></i> Delete
+                          </button>
+                        </form>
                       <% } %>
                     </div>
                   </td>

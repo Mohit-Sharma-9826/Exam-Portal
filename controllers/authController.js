@@ -113,11 +113,11 @@ exports.registerStudent = async (req, res, next) => {
       return res.render('auth/student-register', { error: 'Email already registered', admins });
     }
 
-    // Check if roll number exists
-    let rollExists = await StudentProfile.findOne({ rollNumber });
+    // Check if roll number exists for the selected administrator
+    let rollExists = await StudentProfile.findOne({ rollNumber, assignedAdmin: adminId });
     if (rollExists) {
-      if (req_is_api(req)) return res.status(400).json({ success: false, message: 'Roll number already exists' });
-      return res.render('auth/student-register', { error: 'Roll number already exists', admins });
+      if (req_is_api(req)) return res.status(400).json({ success: false, message: 'Roll number already exists for this administrator' });
+      return res.render('auth/student-register', { error: 'Roll number already exists for this administrator', admins });
     }
 
     // Verify adminId is provided and active
@@ -326,6 +326,15 @@ exports.verifyOtp = async (req, res, next) => {
       res.clearCookie('regToken');
       if (req_is_api(req)) return res.status(400).json({ success: false, message: 'Email already registered' });
       return res.redirect('/auth/register?error=Email%20already%20registered');
+    }
+
+    // Double check roll number doesn't already exist for this administrator
+    let rollExists = await StudentProfile.findOne({ rollNumber, assignedAdmin: adminId });
+    if (rollExists) {
+      await Otp.deleteOne({ _id: otpDoc._id }); // Delete OTP session
+      res.clearCookie('regToken');
+      if (req_is_api(req)) return res.status(400).json({ success: false, message: 'Roll number already exists for this administrator' });
+      return res.redirect('/auth/register?error=Roll%20number%20already%20exists%20for%20this%20administrator');
     }
 
     // Create student user with isApproved: false

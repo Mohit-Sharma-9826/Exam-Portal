@@ -19,6 +19,7 @@ router.post('/students/:id/assign', adminController.assignExam);
 router.post('/students/:id/toggle', adminController.toggleStudentStatus);
 router.post('/students/:id/approve', adminController.approveStudent);
 router.post('/students/:id/reject', adminController.rejectStudent);
+router.post('/students/:id/delete', adminController.deleteStudent);
 
 // Exam Management (CRUD)
 router.get('/exams', examController.getExams);

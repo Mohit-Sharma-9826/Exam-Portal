@@ -30,9 +30,9 @@ const sendOtpEmail = async (email, otp, name) => {
   });
 
   const mailOptions = {
-    from: `"ExamPortal Support" <${from}>`,
+    from: `"Exam Portal Support" <${from}>`,
     to: email,
-    subject: 'Verify Your ExamPortal Registration OTP',
+    subject: 'Exam Portal - Email Verification Code',
     html: `
       <!DOCTYPE html>
       <html>
@@ -112,7 +112,7 @@ const sendOtpEmail = async (email, otp, name) => {
         <div class="email-wrapper">
           <div class="email-content">
             <div class="email-header">
-              <h2>ExamPortal</h2>
+              <h2>Exam Portal</h2>
             </div>
             <div class="email-body">
               <p>Hello <strong>${name}</strong>,</p>

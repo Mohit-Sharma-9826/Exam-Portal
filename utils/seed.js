@@ -20,6 +20,11 @@ const seedData = async () => {
     console.log('Clearing database...');
     await User.deleteMany();
     await StudentProfile.deleteMany();
+    try {
+      await StudentProfile.collection.dropIndexes();
+    } catch (err) {
+      // Ignore if collection does not exist yet
+    }
     await AdminProfile.deleteMany();
     await Exam.deleteMany();
     await Question.deleteMany();

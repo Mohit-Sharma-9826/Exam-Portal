@@ -10,7 +10,6 @@ const StudentProfileSchema = new mongoose.Schema({
   rollNumber: {
     type: String,
     required: [true, 'Please provide a roll number'],
-    unique: true,
     trim: true
   },
   batch: {
@@ -28,5 +27,8 @@ const StudentProfileSchema = new mongoose.Schema({
     ref: 'Exam'
   }]
 });
+
+// Compound unique index so roll numbers are unique only within a single administrator's roster
+StudentProfileSchema.index({ rollNumber: 1, assignedAdmin: 1 }, { unique: true });
 
 module.exports = mongoose.model('StudentProfile', StudentProfileSchema);

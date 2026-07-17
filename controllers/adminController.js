@@ -348,3 +348,43 @@ exports.rejectStudent = async (req, res, next) => {
     next(error);
   }
 };
+
+// @desc    Delete student completely from database
+exports.deleteStudent = async (req, res, next) => {
+  try {
+    // Verify student is managed by this admin
+    const profile = await StudentProfile.findOne({ user: req.params.id, assignedAdmin: req.user._id });
+    if (!profile) {
+      if (req.originalUrl.startsWith('/api/')) {
+        return res.status(403).json({ success: false, message: 'Not authorized to manage this student' });
+      }
+      return res.status(403).render('error', { title: 'Forbidden', message: 'Not authorized to manage this student', statusCode: 403, user: req.user });
+    }
+
+    const user = await User.findById(req.params.id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'Student not found' });
+    }
+
+    // Delete records
+    await StudentProfile.deleteOne({ user: req.params.id });
+    await User.deleteOne({ _id: req.params.id });
+    await Result.deleteMany({ student: req.params.id });
+    await StudentResponse.deleteMany({ student: req.params.id });
+
+    await logActivity(
+      req.user._id,
+      'DELETE_STUDENT',
+      `Deleted student ${user.name} (${user.email}) completely from the database`,
+      req
+    );
+
+    if (req.originalUrl.startsWith('/api/')) {
+      return res.json({ success: true, message: 'Student deleted successfully' });
+    }
+
+    res.redirect('/admin/students');
+  } catch (error) {
+    next(error);
+  }
+};
