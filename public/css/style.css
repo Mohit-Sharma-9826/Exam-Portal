@@ -435,6 +435,7 @@ body {
 .btn-danger {
   background-color: #ef4444;
   color: white;
+  height: 29px;
 }
 
 .btn-danger:hover {
