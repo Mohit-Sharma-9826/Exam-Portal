@@ -20,7 +20,7 @@ exports.protect = async (req, res, next) => {
 
   try {
     // Verify token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'super_secret_exam_portal_jwt_secret_key_2026');
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
     // Attach user to request
     req.user = await User.findById(decoded.id);

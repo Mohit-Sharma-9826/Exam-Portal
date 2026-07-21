@@ -7,7 +7,7 @@ const { sendOtpEmail } = require('../utils/mailer');
 
 // Helper to generate JWT
 const generateToken = (id) => {
-  return jwt.sign({ id }, process.env.JWT_SECRET || 'super_secret_exam_portal_jwt_secret_key_2026', {
+  return jwt.sign({ id }, process.env.JWT_SECRET, {
     expiresIn: '30d'
   });
 };
@@ -48,7 +48,7 @@ const req_is_api = (req) => {
 // Helper to redirect authenticated users to their correct dashboards based on role
 const redirectDashboard = async (token, res) => {
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'super_secret_exam_portal_jwt_secret_key_2026');
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const user = await User.findById(decoded.id);
     if (user && user.isActive) {
       if (user.role === 'admin' || user.role === 'superAdmin') {
@@ -138,7 +138,7 @@ exports.registerStudent = async (req, res, next) => {
     // Create registration token containing registration details, expires in 5 minutes
     const regToken = jwt.sign(
       { name, email, password, rollNumber, batch, adminId },
-      process.env.JWT_SECRET || 'super_secret_exam_portal_jwt_secret_key_2026',
+      process.env.JWT_SECRET,
       { expiresIn: '5m' }
     );
 
@@ -311,7 +311,7 @@ exports.verifyOtp = async (req, res, next) => {
 
     let decoded;
     try {
-      decoded = jwt.verify(token, process.env.JWT_SECRET || 'super_secret_exam_portal_jwt_secret_key_2026');
+      decoded = jwt.verify(token, process.env.JWT_SECRET);
     } catch (err) {
       if (req_is_api(req)) return res.status(400).json({ success: false, message: 'Registration session expired. Please register again.' });
       return res.render('auth/verify-otp', { email, error: 'Registration session expired. Please register again.', success: null });
@@ -386,7 +386,7 @@ exports.resendOtp = async (req, res, next) => {
 
     let decoded;
     try {
-      decoded = jwt.verify(token, process.env.JWT_SECRET || 'super_secret_exam_portal_jwt_secret_key_2026');
+      decoded = jwt.verify(token, process.env.JWT_SECRET);
     } catch (err) {
       return res.status(400).json({ success: false, message: 'Registration session expired. Please register again.' });
     }
